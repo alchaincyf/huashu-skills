@@ -83,39 +83,48 @@ description: |
 
 ## 环境准备与依赖管理
 
-### 必需的Skills
+### 内置脚本（随 skill 一起安装，无需额外配置）
 
-本skill依赖以下已安装的skills。**首次使用时自动检查，缺失则引导安装：**
+本 skill 在 `scripts/` 目录中内置了所有必需脚本：
 
-| Skill | 用途 | 安装命令 |
-|-------|------|---------|
-| **xlsx** | 读写Excel文件 | `npx skills add https://github.com/anthropics/skills --skill xlsx` |
-| **pptx** | 读写PPT文件、HTML转PPTX | `npx skills add https://github.com/anthropics/skills --skill pptx` |
+| 脚本 | 用途 | 语言 |
+|------|------|------|
+| `scripts/html2pptx.js` | HTML幻灯片 → PPTX转换引擎（核心） | Node.js |
+| `scripts/build_pptx.js` | 完整PPT构建脚本（多页HTML → 单个PPTX） | Node.js |
+| `scripts/read_excel.py` | Excel读取与分析（支持markdown/csv/json输出） | Python |
+| `scripts/read_pptx.py` | PPTX读取与结构分析 | Python |
 
-### 依赖检查流程
+**获取脚本路径**：脚本位于本 SKILL.md 所在目录的 `scripts/` 子目录。
 
-每次涉及Excel或PPT操作前，执行：
+### 依赖检查与自动安装
+
+每次涉及 Excel 或 PPT 操作前，执行依赖检查：
 
 ```bash
-# 检查xlsx skill
-ls ~/.agents/skills/xlsx/SKILL.md 2>/dev/null && echo "xlsx: OK" || echo "xlsx: MISSING"
+# 获取skill目录（脚本所在位置）
+SKILL_DIR="$(dirname "$(find ~/.claude/skills ~/.agents/skills -name 'SKILL.md' -path '*/data-office-pro/*' 2>/dev/null | head -1)")"
 
-# 检查pptx skill
-ls ~/.agents/skills/pptx/SKILL.md 2>/dev/null && echo "pptx: OK" || echo "pptx: MISSING"
+# 检查Node.js依赖
+node -e "require('pptxgenjs')" 2>/dev/null && echo "pptxgenjs: OK" || echo "pptxgenjs: MISSING"
+node -e "require('playwright')" 2>/dev/null && echo "playwright: OK" || echo "playwright: MISSING"
+node -e "require('sharp')" 2>/dev/null && echo "sharp: OK" || echo "sharp: MISSING"
 
 # 检查Python依赖
 python3 -c "import openpyxl; print('openpyxl: OK')" 2>/dev/null || echo "openpyxl: MISSING"
 python3 -c "import pandas; print('pandas: OK')" 2>/dev/null || echo "pandas: MISSING"
+python3 -c "import pptx; print('python-pptx: OK')" 2>/dev/null || echo "python-pptx: MISSING"
 ```
 
 **缺失时自动安装**（不要让用户手动处理）：
 
 ```bash
-# 安装缺失的skill
-npx skills add https://github.com/anthropics/skills --skill xlsx
-npx skills add https://github.com/anthropics/skills --skill pptx
+# 安装Node.js依赖（PPT制作必需）
+npm install -g pptxgenjs playwright sharp 2>/dev/null || npm install pptxgenjs playwright sharp
 
-# 安装Python依赖
+# 安装Playwright浏览器（html2pptx需要）
+npx playwright install chromium
+
+# 安装Python依赖（Excel/PPT读取必需）
 pip install openpyxl pandas python-pptx Pillow 2>/dev/null || pip3 install openpyxl pandas python-pptx Pillow
 ```
 
@@ -366,9 +375,49 @@ body {
 
 ### Step 5: 构建PPTX
 
+**方式一：使用内置构建脚本（推荐）**
+
+```bash
+# 获取skill目录
+SKILL_DIR="$(dirname "$(find ~/.claude/skills ~/.agents/skills -name 'SKILL.md' -path '*/data-office-pro/*' 2>/dev/null | head -1)")"
+
+# 从多个HTML文件构建PPT
+node "$SKILL_DIR/scripts/build_pptx.js" --slides slide1.html slide2.html slide3.html --output report.pptx
+
+# 从目录加载所有HTML文件（按文件名排序）
+node "$SKILL_DIR/scripts/build_pptx.js" --dir ./slides/ --output report.pptx
+
+# 带图表：在第0页的placeholder中插入柱状图
+node "$SKILL_DIR/scripts/build_pptx.js" --slides slide1.html slide2.html --output report.pptx --chart 0:col:chart_data.json
+```
+
+**图表数据JSON格式**（`chart_data.json`示例）：
+
+```json
+{
+  "title": "各板块ROI对比",
+  "catAxisTitle": "板块",
+  "valAxisTitle": "ROI",
+  "colors": ["E17055", "45B7AA", "5B8C5A", "FFD700"],
+  "series": [{
+    "name": "ROI",
+    "labels": ["美妆", "食品", "服饰", "个护"],
+    "values": [3.8, 2.5, 1.1, 2.0]
+  }]
+}
+```
+
+**方式二：自定义构建脚本**（需要更精细控制时）
+
 ```javascript
+// 获取html2pptx引擎路径（内置于skill中）
+// SKILL_DIR 通过环境变量或路径查找获取
+const skillDir = process.env.SKILL_DIR || require('child_process')
+  .execSync('find ~/.claude/skills ~/.agents/skills -name "SKILL.md" -path "*/data-office-pro/*" 2>/dev/null | head -1')
+  .toString().trim().replace('/SKILL.md', '');
+
 const pptxgen = require('pptxgenjs');
-const html2pptx = require(process.env.HOME + '/.agents/skills/pptx/scripts/html2pptx.js');
+const html2pptx = require(skillDir + '/scripts/html2pptx.js');
 
 const pptx = new pptxgen();
 pptx.layout = 'LAYOUT_16x9';  // 必须与HTML尺寸匹配
@@ -381,7 +430,7 @@ for (const htmlFile of slideFiles) {
   if (placeholders.length > 0) {
     slide.addChart(pptx.charts.BAR, chartData, {
       ...placeholders[0],
-      chartColors: ["E17055", "45B7AA", "5B8C5A", "FFD700"]  // 无#前缀
+      chartColors: ["E17055", "45B7AA", "5B8C5A", "FFD700"]  // 无#前缀！
     });
   }
 }
@@ -502,33 +551,48 @@ npx playwright screenshot "file:///path/to/slide.html" preview.png \
 
 ## PPTX读取与分析
 
-### 读取现有PPT内容
+### 读取现有PPT内容（使用内置脚本）
 
 ```bash
-# 提取文字内容（使用markitdown）
-python3 -m markitdown presentation.pptx > content.md
+# 获取skill目录
+SKILL_DIR="$(dirname "$(find ~/.claude/skills ~/.agents/skills -name 'SKILL.md' -path '*/data-office-pro/*' 2>/dev/null | head -1)")"
 
-# 生成缩略图预览
-python3 ~/.agents/skills/pptx/scripts/thumbnail.py presentation.pptx --output thumbnails/
+# 读取PPT全部文字内容（默认text格式）
+python3 "$SKILL_DIR/scripts/read_pptx.py" presentation.pptx
 
-# 查看PPT结构（slide数量、布局等）
-python3 ~/.agents/skills/pptx/scripts/inventory.py presentation.pptx
+# 输出为Markdown格式（便于阅读和引用）
+python3 "$SKILL_DIR/scripts/read_pptx.py" presentation.pptx --format markdown
+
+# 输出为JSON格式（便于程序处理）
+python3 "$SKILL_DIR/scripts/read_pptx.py" presentation.pptx --format json
+
+# 仅查看结构信息（页数、布局、元素数量）
+python3 "$SKILL_DIR/scripts/read_pptx.py" presentation.pptx --inventory
+
+# 仅查看第3页
+python3 "$SKILL_DIR/scripts/read_pptx.py" presentation.pptx --slide 3
 ```
 
-### Excel读取与分析
+### Excel读取与分析（使用内置脚本）
 
-```python
-import pandas as pd
+```bash
+# 获取skill目录
+SKILL_DIR="$(dirname "$(find ~/.claude/skills ~/.agents/skills -name 'SKILL.md' -path '*/data-office-pro/*' 2>/dev/null | head -1)")"
 
-# 读取Excel（自动检测编码和格式）
-df = pd.read_excel('data.xlsx')
+# 读取Excel（默认Markdown表格输出，所有工作表）
+python3 "$SKILL_DIR/scripts/read_excel.py" data.xlsx
 
-# 多sheet读取
-all_sheets = pd.read_excel('data.xlsx', sheet_name=None)  # 返回dict
-for name, sheet_df in all_sheets.items():
-    print(f"\n=== Sheet: {name} ===")
-    print(f"维度: {sheet_df.shape}")
-    print(sheet_df.head())
+# 仅输出数据概览（字段类型、空值率、数值统计）
+python3 "$SKILL_DIR/scripts/read_excel.py" data.xlsx --summary
+
+# 指定工作表 + 前20行
+python3 "$SKILL_DIR/scripts/read_excel.py" data.xlsx --sheet "Sheet1" --head 20
+
+# 输出CSV格式（便于后续处理）
+python3 "$SKILL_DIR/scripts/read_excel.py" data.xlsx --format csv
+
+# 输出JSON格式
+python3 "$SKILL_DIR/scripts/read_excel.py" data.xlsx --format json
 ```
 
 ---
@@ -659,9 +723,13 @@ npx playwright screenshot "file:///path/to/slide.html" preview.png \
 | 处理后的Excel | 当前目录 | `[原文件名]-processed.xlsx` |
 | HTML临时文件 | `/tmp/` | 自动清理 |
 
-### 完整参考文件
+### 完整文件清单
 
 | 文件 | 内容 |
 |------|------|
+| `scripts/html2pptx.js` | HTML→PPTX核心转换引擎（978行，支持文字/图片/形状/列表/图表占位） |
+| `scripts/build_pptx.js` | 完整PPT构建脚本（命令行工具，支持多页HTML+图表→PPTX） |
+| `scripts/read_excel.py` | Excel读取工具（支持markdown/csv/json输出，数据概览，多Sheet） |
+| `scripts/read_pptx.py` | PPTX读取工具（支持text/markdown/json输出，结构分析） |
 | `references/visual-design-system.md` | 3种PPT风格完整CSS参数、图表配色、深色模式规范 |
-| `references/html-templates.md` | 数据看板、图表、信息图的HTML模板库 |
+| `references/html-templates.md` | 数据看板、图表、信息图的6套HTML模板库 |
