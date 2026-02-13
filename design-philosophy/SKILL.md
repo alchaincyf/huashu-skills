@@ -1,6 +1,7 @@
 ---
 name: design-philosophy
-description: Design philosophy consultant for visual presentation work (web, app, PPT, PDF, infographics). Provides 3 curated design directions based on deep need analysis, generates AI-ready prompts, and conducts expert critique with scoring.
+description: |
+  Design philosophy consultant for visual presentation work. Use when the user asks to "choose a design style", "recommend a design direction", "pick a visual style", "design review", "critique this design", or mentions "设计风格", "设计方向", "设计哲学", "配色方案", "视觉风格", "设计评审", "评审一下", "推荐风格", "选个风格", "设计建议" in the context of creating visual outputs (web, app, PPT, PDF, infographics, posters, covers). Also triggers after any visual design output is completed, to provide expert critique with scoring. Provides 3 curated design directions from 20 design philosophies, generates AI-ready prompts, and conducts expert-level design review.
 ---
 
 # Design Philosophy Consultant
