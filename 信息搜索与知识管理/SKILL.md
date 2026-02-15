@@ -1,5 +1,5 @@
 ---
-name: information-search-knowledge-management
+name: huashu-info-search
 description: Automatically performs multi-channel search, verifies information, and saves to knowledge base when dealing with new products/technologies. Use when discussing new products (released within 3 months), need latest information verification, or user requests search. Prioritizes authoritative tech media and ignores outdated sources.
 ---
 
@@ -80,3 +80,9 @@ description: Automatically performs multi-channel search, verifies information, 
 - 信息冲突时，优先采信权威来源
 
 **最后更新**: 2025-11-07
+
+---
+
+> **花叔出品** | AI Native Coder · 独立开发者
+> 公众号「花叔」| 30万+粉丝 | AI工具与效率提升
+> 代表作：小猫补光灯（AppStore付费榜Top1）·《一本书玩转DeepSeek》

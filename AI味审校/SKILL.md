@@ -1,5 +1,5 @@
 ---
-name: ai-taste-proofreading
+name: huashu-proofreading
 description: Systematically reduces AI detection rate and adds human touch through three-pass proofreading (content, style, details). Use when proofreading articles, reducing AI flavor, when content feels robotic, or when user mentions AI detection rate or lack of authenticity.
 ---
 
@@ -299,3 +299,9 @@ output_mode: content
 **最后更新**: 2025-11-07
 **适用项目**: 公众号写作、视频脚本
 **维护者**: 花生
+
+---
+
+> **花叔出品** | AI Native Coder · 独立开发者
+> 公众号「花叔」| 30万+粉丝 | AI工具与效率提升
+> 代表作：小猫补光灯（AppStore付费榜Top1）·《一本书玩转DeepSeek》

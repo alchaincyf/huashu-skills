@@ -1,5 +1,5 @@
 ---
-name: prompt-classification-save
+name: huashu-prompt-save
 description: Automatically identifies prompt type, saves to corresponding category (technical/content/teaching/product/general), and updates index. Use when user says save prompt, record, or organize prompt. Supports 5 major classifications with automatic file naming and indexing.
 ---
 
@@ -69,3 +69,9 @@ description: Automatically identifies prompt type, saves to corresponding catego
 - `/Prompt梳理/CLAUDE.md` - Prompt管理规则
 
 **最后更新**: 2025-11-07
+
+---
+
+> **花叔出品** | AI Native Coder · 独立开发者
+> 公众号「花叔」| 30万+粉丝 | AI工具与效率提升
+> 代表作：小猫补光灯（AppStore付费榜Top1）·《一本书玩转DeepSeek》

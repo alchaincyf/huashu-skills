@@ -1,4 +1,4 @@
-# Proven Styles Gallery: 18 Tested Visual Styles for AI Slides
+# Proven Styles Gallery: 18 Tested Visual Styles for AI Slides + 5 Professional Editorial Styles
 
 > 实战验证的风格画廊。基于2026-02-08小红书介绍PPT项目，同一页slide（种草链路：发现→种草→搜索→购买）在17种风格下全部一次生成成功。
 > 2026-02-09蕴煜AI培训项目验证Neo-Brutalism风格（Day1 67页 + Day2 64页全部HTML渲染成功）。
@@ -61,7 +61,10 @@
 | 年轻受众 | Neo-Pop | 像素画 | 孔版印刷 |
 | 创意/艺术 | 达达拼贴 | 孔版印刷 | The Oatmeal |
 | 国风/东方 | 敦煌壁画 | 浮世绘 | 温暖叙事 |
-| 正式商务 | Neo-Brutalism | Ligne Claire | 温暖叙事 |
+| 正式商务 | **Pentagram Editorial** | Neo-Brutalism | Ligne Claire |
+| 行业分析/咨询 | **Pentagram Editorial** | **Fathom Data** | Ligne Claire |
+| 培训课件/教材 | Neo-Brutalism | **Müller-Brockmann Grid** | 学習漫画 |
+| 投资/融资路演 | **Build Luxury Minimal** | **Pentagram Editorial** | **Takram Speculative** |
 | 产品发布/keynote | 苏联构成主义 | Neo-Pop | Neo-Brutalism |
 | 内部分享 | Neo-Brutalism | The Oatmeal | xkcd白板 |
 
@@ -258,6 +261,23 @@
 - `brutalist poster design`
 - `Gumroad brand design`
 - `flat design with thick borders`
+
+---
+
+## 第四类：Professional / Editorial 设计系统（Path A 专用）
+
+> 以下5种风格使用 HTML→PPTX 路径，依赖精确排版和网格系统。详细 preset 定义见 SKILL.md「第四类」章节。
+
+| # | 风格 | 适合场景 | 核心特点 | 执行路径 |
+|---|------|---------|---------|---------|
+| P1 | **Pentagram Editorial** | 行业分析、咨询报告、数据驱动 | 字体即语言，瑞士网格，ONE accent color | Path A |
+| P2 | **Fathom Data Narrative** | 数据报告、科学展示、研究汇报 | 高信息密度+设计优雅，图表即叙事 | Path A |
+| P3 | **Müller-Brockmann Grid** | 培训课件、技术架构、流程说明 | 数学精确网格，功能主义至上 | Path A |
+| P4 | **Build Luxury Minimal** | 投资路演、品牌高管汇报、奢侈品 | 75%留白，微妙字重变化，高端克制 | Path A |
+| P5 | **Takram Speculative** | 设计思维、产品愿景、战略规划 | 柔和科技感，概念原型图作为核心视觉 | Path A（配图可AI辅助） |
+
+**实战验证**：Pentagram Editorial 在口腔行业分析15页deck中验证成功（`_temp/口腔行业分析/slides/`）
+**更深入的风格细节**：参考 `design-philosophy` skill 的 `references/design-styles.md`
 
 ---
 

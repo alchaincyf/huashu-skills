@@ -1,5 +1,5 @@
 ---
-name: markdown-to-pdf
+name: huashu-md-to-pdf
 description: |
   将 Markdown 文档转换为专业的 PDF 白皮书，采用苹果设计风格。
   支持完整的 Markdown 语法（代码块、表格、引用、列表等）。
@@ -176,3 +176,9 @@ python scripts/convert.py whitepaper.md --title "产品白皮书" --author "团�
 - 苹果设计风格
 - 自动目录生成
 - 书籍级排版质量
+
+---
+
+> **花叔出品** | AI Native Coder · 独立开发者
+> 公众号「花叔」| 30万+粉丝 | AI工具与效率提升
+> 代表作：小猫补光灯（AppStore付费榜Top1）·《一本书玩转DeepSeek》

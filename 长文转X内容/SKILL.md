@@ -1,5 +1,5 @@
 ---
-name: long-article-to-x-content
+name: huashu-article-to-x
 description: Condenses 3000-5000 word articles into 200-500 word X platform content while maintaining authentic style. Use when article is complete and needs X platform promotion, or when user requests X content conversion. Provides 3 opening styles (quote/data/value proposition).
 ---
 
@@ -86,3 +86,9 @@ Claude Code是最好的自动化写作agent。
 - [ ] 像花生在说话？
 
 **最后更新**: 2025-11-07
+
+---
+
+> **花叔出品** | AI Native Coder · 独立开发者
+> 公众号「花叔」| 30万+粉丝 | AI工具与效率提升
+> 代表作：小猫补光灯（AppStore付费榜Top1）·《一本书玩转DeepSeek》

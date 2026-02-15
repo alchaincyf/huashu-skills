@@ -1,5 +1,5 @@
 ---
-name: ai-presentation
+name: huashu-slides
 description: |
   Create professional presentations end-to-end using AI. Use when the user asks to "make a PPT", "create slides", "create a presentation", "design a deck", "combine images into slides", "image to PowerPoint", or mentions "PPT", "PPTX", "slides", "presentation", "deck", "Keynote", "演示文稿", "幻灯片" in the context of creating or assembling presentations. Covers the full workflow: content structuring, design system, illustration generation, and PPTX assembly.
 ---
@@ -133,13 +133,16 @@ Pick 3 that match the topic/mood. Use the **topic recommendation table** below, 
 | 品牌/产品介绍 | Snoopy温暖漫画 | Neo-Pop新波普 | 浮世绘/敦煌（东方品牌） |
 | 教育/培训 | Neo-Brutalism | 学習漫画 | Snoopy温暖漫画 |
 | 技术分享 | xkcd白板 | Neo-Brutalism | Ligne Claire |
-| 数据报告 | Ligne Claire | 苏联构成主义 | Neo-Brutalism |
+| 数据报告 | **Pentagram编辑** | **Fathom数据** | Ligne Claire |
 | 年轻受众 | Neo-Pop | 像素画 | 孔版印刷 |
 | 创意/艺术 | 达达拼贴 | 孔版印刷 | The Oatmeal |
-| 国风/东方 | 敦煌壁画 | 浮世绘 | 温暖叙事 |
-| 正式商务 | Neo-Brutalism | Ligne Claire | 温暖叙事 |
-| 产品发布/keynote | 苏联构成主义 | Neo-Pop | Neo-Brutalism |
+| 国风/东方 | 敦煌壁画 | 浮世绘 | **Takram思辨** |
+| 正式商务 | **Pentagram编辑** | **Müller-Brockmann网格** | **Build极简** |
+| 产品发布/keynote | 苏联构成主义 | Neo-Pop | **Pentagram编辑** |
 | 内部分享 | Neo-Brutalism | The Oatmeal | xkcd白板 |
+| 行业分析/咨询 | **Fathom数据** | **Pentagram编辑** | **Müller-Brockmann网格** |
+| 培训课件/教材 | **Takram思辨** | 温暖叙事 | 学習漫画 |
+| 投资/融资路演 | **Build极简** | **Pentagram编辑** | 苏联构成主义 |
 
 **完整18种风格详细参考：** `references/proven-styles-gallery.md`
 **风格样例图片：** `assets/style-samples/` 目录
@@ -211,6 +214,65 @@ Pick 3 that match the topic/mood. Use the **topic recommendation table** below, 
 - Reference: "Like a Mailchimp or Notion brand presentation — approachable and human"
 
 **更多风格（第二/三梯队）** 详见 `references/proven-styles-gallery.md`，包括：The Oatmeal信息图漫画、敦煌壁画、浮世绘、孔版印刷Risograph、等轴测Isometric、Bauhaus包豪斯、工程蓝图Blueprint、复古广告Vintage Ad、达达拼贴Collage、像素画Pixel Art
+
+---
+
+**第四类：Professional / Editorial 设计系统（Path A 专用）**
+
+> ⚠️ 以下风格 **强烈建议使用 Path A（HTML→PPTX）**。它们依赖精确排版、数据可视化和网格系统，AI图片生成无法达到所需精度。口腔行业分析案例已验证 Path A + Pentagram编辑风格的出色效果。
+
+**8. Pentagram Editorial** — 编辑杂志风（信息建筑派）
+- Philosophy: Pentagram/Michael Bierut — 字体即语言，网格即思想。用极度克制的设计让数据和内容自己说话
+- Colors: 奶油白(#FFFDF7) bg, 近黑(#1A1A1A) text, ONE accent color (如橙红#D4480B或品牌色)
+- Ratio: 60% whitespace / 30% content / 10% accent
+- Typography: 粗黑标题(28pt+) + 轻正文(10-13pt), 英文section label作为设计元素 (INSIGHT / PART 03)
+- Composition: 瑞士网格系统, 2px黑色边框卡片, 精确的水平分隔线, 数据可视化内嵌
+- Visual language: 极简图标, 条形图/饼图/趋势线, callout框, tag标签
+- Reference: "Like a McKinsey insight report meets Monocle magazine — data-rich but editorially elegant"
+- **执行路径: Path A only（HTML→PPTX）**
+- **实战验证**: 口腔行业分析15页deck（`_temp/口腔行业分析/slides/`）
+
+**9. Fathom Data Narrative** — 数据叙事风（科学期刊派）
+- Philosophy: Fathom Information Design — 每一个像素都必须承载信息。科学严谨+设计优雅
+- Colors: 白(#FFFFFF) bg, 深灰(#333) text, 海军蓝(#1A365D) primary + 一个highlight color
+- Ratio: 50% charts/data / 30% text / 20% whitespace
+- Typography: GT America/Graphik风格的sans-serif, 大数字(60pt+)作为视觉锚点, 精确的脚注/来源标注
+- Composition: 高信息密度但不拥挤, 注释系统嵌入布局, small multiples图表阵列, 精确的时间线
+- Visual language: 散点图, 热力图, timeline, 带注释的图表, 数据标签精确到小数
+- Reference: "Like a Nature paper's data supplement meets a Bloomberg data feature"
+- **执行路径: Path A only（HTML→PPTX）**
+
+**10. Müller-Brockmann Grid** — 瑞士网格风（纯粹主义派）
+- Philosophy: Josef Müller-Brockmann — 客观性即美。数学精确的网格系统让任何混乱的信息变得有序
+- Colors: 白(#FFFFFF) bg, 黑(#000) text, 最多一个强调色
+- Ratio: 70% structured grid / 20% text / 10% accent
+- Typography: Akzidenz-Grotesk/Helvetica, 严格的8pt基线网格, 绝对左对齐, 字重对比(300 vs 700)
+- Composition: 8列数学网格, 所有元素对齐到网格线, 绝对不允许装饰元素, 功能主义至上
+- Visual language: 纯几何图形, 黑色线条表格, 精确对齐的列表, 无图标无插画
+- Reference: "Like the original Swiss Style poster — timeless, rational, zero decoration"
+- **执行路径: Path A only（HTML→PPTX）**
+
+**11. Build Luxury Minimal** — 奢侈极简风（当代品牌派）
+- Philosophy: Build Studio — 精致的简单比复杂更难。用大量留白和微妙字重变化传达高端感
+- Colors: 纯白(#FFFFFF) bg, 深灰(#2D2D2D) text, 单一accent(品牌色)极少量使用
+- Ratio: 75% whitespace / 15% text / 10% accent
+- Typography: 字重变化极微妙(200-600), 标题巨大(48pt+)但轻, 正文小而精(12pt), 字间距宽松
+- Composition: 黄金比例构图, 元素极少, 每页只说一件事, 呼吸感优先
+- Visual language: 高端产品图(如果有), 极简图标线条, 大面积纯色块, 圆角卡片
+- Reference: "Like an Apple keynote meets a Celine lookbook — confident restraint"
+- **执行路径: Path A（HTML→PPTX）**
+
+**12. Takram Speculative** — 日式思辨风（东方哲学派）
+- Philosophy: Takram — 技术是思考的媒介。用柔和的科技感和概念原型图传达深度思考
+- Colors: 暖灰(#F5F3EF) bg, 深灰(#3D3D3D) text, 鼠尾草绿(#8B9D77) accent
+- Ratio: 55% warm bg / 25% diagrams / 20% text
+- Typography: 圆润的sans-serif, 标题不用粗体而用大尺寸(36pt+), 正文温暖(14pt), 行高宽松(1.8)
+- Composition: 柔和阴影(blur 20px+), 圆角(16px+), 概念图/流程图作为核心视觉, 卡片式布局
+- Visual language: 概念原型图, 柔和渐变, 流程图即艺术, 手绘感图标, 自然色调
+- Reference: "Like a Takram project page — where technology feels thoughtful, not aggressive"
+- **执行路径: Path A（HTML→PPTX，配图可AI辅助生成）**
+
+**更深入的风格细节**：参考 `design-philosophy` skill 的 `references/design-styles.md`，包含20种设计哲学的完整提示词DNA
 
 ### 🎨 Custom Character Style (User-Defined)
 
@@ -560,9 +622,16 @@ npx playwright screenshot "file:///path/to/slide.html" preview.png \
 | `pptx` | Advanced PPTX creation/editing (html2pptx, templates) |
 | `nano-banana-pro` | AI illustration generation (Gemini 3 Pro Image) |
 | `multi-model` | External AI for content drafting |
+| `design-philosophy` | 20种设计哲学深度参考（风格DNA + 场景模板 + 评审标准）。Professional/Editorial风格的详细提示词和评审指南在此 |
 
 ## Output
 
 - `.pptx` files compatible with PowerPoint, Keynote, Google Slides
 - Web-safe fonts for cross-platform compatibility
 - AI illustrations as separate PNG files (reusable)
+
+---
+
+> **花叔出品** | AI Native Coder · 独立开发者
+> 公众号「花叔」| 30万+粉丝 | AI工具与效率提升
+> 代表作：小猫补光灯（AppStore付费榜Top1）·《一本书玩转DeepSeek》

@@ -1,5 +1,5 @@
 ---
-name: design-philosophy
+name: huashu-design
 description: |
   Design philosophy consultant for visual presentation work. Use when the user asks to "choose a design style", "recommend a design direction", "pick a visual style", "design review", "critique this design", or mentions "设计风格", "设计方向", "设计哲学", "配色方案", "视觉风格", "设计评审", "评审一下", "推荐风格", "选个风格", "设计建议" in the context of creating visual outputs (web, app, PPT, PDF, infographics, posters, covers). Also triggers after any visual design output is completed, to provide expert critique with scoring. Provides 3 curated design directions from 20 design philosophies, generates AI-ready prompts, and conducts expert-level design review.
 ---
@@ -181,3 +181,9 @@ description: |
 - 推荐时永远解释「为什么这个设计师适合」，不只是「这个风格是什么」
 - 评审时直接指出问题 + 给出解决方案（含具体数值）
 - 鼓励用户实验和迭代，设计本就是概率性的
+
+---
+
+> **花叔出品** | AI Native Coder · 独立开发者
+> 公众号「花叔」| 30万+粉丝 | AI工具与效率提升
+> 代表作：小猫补光灯（AppStore付费榜Top1）·《一本书玩转DeepSeek》

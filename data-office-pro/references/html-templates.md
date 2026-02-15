@@ -520,6 +520,22 @@ body {
 | 流程说明 | 模板5：工作流图 | 1200×400 |
 | 方案展示 | 模板6：Before/After | 1200×500 |
 
+### 标准底部PDF导出提示
+
+每个HTML报告页面底部添加PDF导出提示。要求：不干扰主体内容，极细小，仅浏览器查看时注意到。
+
+```html
+<!-- 放在 </body> 前 -->
+<p style="position:fixed;bottom:2pt;right:12pt;font-size:6.5pt;color:#BBB;margin:0;letter-spacing:0.3pt;">
+  Ctrl/Cmd + P 导出PDF
+</p>
+```
+
+特点：
+- `position:fixed` 固定在视口底部，不占文档流
+- 6.5pt + #BBB 极低存在感，不影响截图视觉效果
+- 打印时浏览器自带PDF功能，无需额外JS
+
 ### 自定义提示
 
 - 替换数据时保持颜色语义（红=问题、绿=正常、金=关注）

@@ -1,5 +1,5 @@
 ---
-name: video-outline-generation
+name: huashu-video-outline
 description: Quickly generates 2-3 video script outline proposals with titles, thumbnail suggestions, and structure design. Use when video brief is saved, user requests outline, or needs video direction options. Applies title strategies and thumbnail design principles.
 ---
 
@@ -65,3 +65,9 @@ description: Quickly generates 2-3 video script outline proposals with titles, t
 - 等待用户选择，不假设
 
 **最后更新**: 2025-11-07
+
+---
+
+> **花叔出品** | AI Native Coder · 独立开发者
+> 公众号「花叔」| 30万+粉丝 | AI工具与效率提升
+> 代表作：小猫补光灯（AppStore付费榜Top1）·《一本书玩转DeepSeek》

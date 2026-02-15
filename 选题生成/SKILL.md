@@ -1,5 +1,5 @@
 ---
-name: topic-generation
+name: huashu-topic-gen
 description: Quickly generates 3-4 article topic directions with titles, outlines, and pros/cons analysis. Use when user saves a brief, requests topic suggestions, or needs article direction options. Provides evaluation of workload, testing needs, and target audience for each option.
 ---
 
@@ -88,3 +88,9 @@ description: Quickly generates 3-4 article topic directions with titles, outline
 - `/公众号写作/_briefs/` - Brief文档
 
 **最后更新**: 2025-11-07
+
+---
+
+> **花叔出品** | AI Native Coder · 独立开发者
+> 公众号「花叔」| 30万+粉丝 | AI工具与效率提升
+> 代表作：小猫补光灯（AppStore付费榜Top1）·《一本书玩转DeepSeek》

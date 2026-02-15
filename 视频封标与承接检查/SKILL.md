@@ -1,5 +1,5 @@
 ---
-name: video-title-thumbnail-hook-checker
+name: huashu-video-check
 description: Checks video title, thumbnail, and content hook based on MrBeast strategies to improve CTR and watch time. Use when checking video titles, thumbnails, content hooks, or when user mentions low CTR or short watch time. Applies 5 contrast formulas and suspense structure.
 ---
 
@@ -401,3 +401,9 @@ description: Checks video title, thumbnail, and content hook based on MrBeast st
 **最后更新**: 2025-11-07
 **适用项目**: 视频创作
 **维护者**: 花生
+
+---
+
+> **花叔出品** | AI Native Coder · 独立开发者
+> 公众号「花叔」| 30万+粉丝 | AI工具与效率提升
+> 代表作：小猫补光灯（AppStore付费榜Top1）·《一本书玩转DeepSeek》

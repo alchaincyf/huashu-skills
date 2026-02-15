@@ -1,5 +1,5 @@
 ---
-name: video-script-colloquial-proofreading
+name: huashu-script-polish
 description: Makes video scripts more suitable for actual recording by enhancing colloquial tone and removing formal language. Use when proofreading video scripts, when content is too formal, or when scripts need to sound more natural for speaking aloud.
 ---
 
@@ -64,3 +64,9 @@ description: Makes video scripts more suitable for actual recording by enhancing
 - `/写作参考/个人素材库/` - 真实表达素材
 
 **最后更新**: 2025-11-07
+
+---
+
+> **花叔出品** | AI Native Coder · 独立开发者
+> 公众号「花叔」| 30万+粉丝 | AI工具与效率提升
+> 代表作：小猫补光灯（AppStore付费榜Top1）·《一本书玩转DeepSeek》
