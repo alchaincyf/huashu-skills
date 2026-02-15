@@ -1,6 +1,6 @@
 ---
 name: huashu-video-outline
-description: Quickly generates 2-3 video script outline proposals with titles, thumbnail suggestions, and structure design. Use when video brief is saved, user requests outline, or needs video direction options. Applies title strategies and thumbnail design principles.
+description: 快速生成2-3个视频大纲方案，含标题、封面建议和结构设计。当用户提到"视频大纲"、"视频结构"、"脚本大纲"、"视频选题"时使用。
 ---
 
 # 视频大纲生成

@@ -1,6 +1,6 @@
 ---
 name: huashu-image-upload
-description: Automatically generates illustrations for articles, uploads to image hosting (ImgBB), and inserts Markdown links. Use when adding images to articles, when user requests illustration, or when article proofreading is complete and needs visuals. Supports AI generation, public domain images, and free stock photos.
+description: 文章配图一键生成并上传图床，自动插入Markdown链接。当用户提到"配图"、"插图"、"上传图片"、"文章配图"时使用。
 ---
 
 # 图片配图与上传

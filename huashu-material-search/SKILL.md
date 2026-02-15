@@ -1,6 +1,6 @@
 ---
 name: huashu-material-search
-description: Quickly searches user's authentic experiences, opinions, and case studies (1800+ entries) to add authenticity and credibility to content. Use when user asks for past experiences, real cases, authentic reviews, or when content needs more human touch. Searches via Grep in CSV database and provides rewriting suggestions.
+description: 搜索个人素材库1800+条真实经历和观点，为内容增加人味。当用户提到"个人经历"、"真实案例"、"素材"、"人味"时使用。
 ---
 
 # 个人素材库搜索

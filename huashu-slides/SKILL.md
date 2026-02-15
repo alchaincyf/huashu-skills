@@ -1,7 +1,6 @@
 ---
 name: huashu-slides
-description: |
-  Create professional presentations end-to-end using AI. Use when the user asks to "make a PPT", "create slides", "create a presentation", "design a deck", "combine images into slides", "image to PowerPoint", or mentions "PPT", "PPTX", "slides", "presentation", "deck", "Keynote", "演示文稿", "幻灯片" in the context of creating or assembling presentations. Covers the full workflow: content structuring, design system, illustration generation, and PPTX assembly.
+description: 从内容到成品PPTX的端到端演示文稿制作，含AI插画生成和18种设计风格。当用户提到"做PPT"、"做幻灯片"、"演示文稿"、"Keynote"、"slides"时使用。
 ---
 
 # AI Presentation Workflow

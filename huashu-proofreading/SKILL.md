@@ -1,6 +1,6 @@
 ---
 name: huashu-proofreading
-description: Systematically reduces AI detection rate and adds human touch through three-pass proofreading (content, style, details). Use when proofreading articles, reducing AI flavor, when content feels robotic, or when user mentions AI detection rate or lack of authenticity.
+description: 三遍审校降低AI检测率，让文章更有人味。当用户提到"AI味太重"、"像AI写的"、"降低AI检测率"、"审校"、"自然一些"时使用。
 ---
 
 # AI味审校

@@ -1,6 +1,6 @@
 ---
 name: huashu-info-search
-description: Automatically performs multi-channel search, verifies information, and saves to knowledge base when dealing with new products/technologies. Use when discussing new products (released within 3 months), need latest information verification, or user requests search. Prioritizes authoritative tech media and ignores outdated sources.
+description: 多渠道搜索新产品新技术，交叉验证后存入知识库。当用户提到"最新信息"、"新产品"、"搜索资料"、"查资料"、"了解XX"时使用。
 ---
 
 # 信息搜索与知识管理

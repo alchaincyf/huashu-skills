@@ -1,5 +1,6 @@
 ---
 name: huashu-agent-swarm
+description: 多Agent蜂群并行协作，纯git自组织，适合大型项目开发。当用户提到"蜂群模式"、"多agent"、"并行开发"、"agent swarm"时使用。
 ---
 
 # Infinite Agent Loop - 无限Agent蜂群模式

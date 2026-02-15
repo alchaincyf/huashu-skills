@@ -1,6 +1,6 @@
 ---
 name: huashu-video-check
-description: Checks video title, thumbnail, and content hook based on MrBeast strategies to improve CTR and watch time. Use when checking video titles, thumbnails, content hooks, or when user mentions low CTR or short watch time. Applies 5 contrast formulas and suspense structure.
+description: 基于MrBeast策略检查视频标题、封面和开头钩子。当用户提到"视频标题"、"封面图"、"点击率"、"CTR"、"观看时长"时使用。
 ---
 
 # 视频封标与承接检查

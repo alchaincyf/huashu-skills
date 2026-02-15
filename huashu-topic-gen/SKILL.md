@@ -1,6 +1,6 @@
 ---
 name: huashu-topic-gen
-description: Quickly generates 3-4 article topic directions with titles, outlines, and pros/cons analysis. Use when user saves a brief, requests topic suggestions, or needs article direction options. Provides evaluation of workload, testing needs, and target audience for each option.
+description: 快速生成3-4个选题方向，含标题、大纲和优劣分析。当用户提到"选题"、"写什么"、"文章方向"、"题目建议"时使用。
 ---
 
 # 选题生成

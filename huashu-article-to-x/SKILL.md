@@ -1,6 +1,6 @@
 ---
 name: huashu-article-to-x
-description: Condenses 3000-5000 word articles into 200-500 word X platform content while maintaining authentic style. Use when article is complete and needs X platform promotion, or when user requests X content conversion. Provides 3 opening styles (quote/data/value proposition).
+description: 长文精简为X平台内容（200-500字），保留核心观点和个人风格。当用户提到"转微博"、"发小红书"、"社交媒体"、"缩短文章"时使用。
 ---
 
 # 长文转X内容

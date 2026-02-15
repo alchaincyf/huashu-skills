@@ -1,6 +1,6 @@
 ---
 name: huashu-script-polish
-description: Makes video scripts more suitable for actual recording by enhancing colloquial tone and removing formal language. Use when proofreading video scripts, when content is too formal, or when scripts need to sound more natural for speaking aloud.
+description: 视频脚本口语化审校，去书面腔让脚本适合说出来。当用户提到"口语化"、"太书面了"、"像说话一样"、"脚本审校"时使用。
 ---
 
 # 视频脚本口语化审校
