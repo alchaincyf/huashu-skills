@@ -1,5 +1,11 @@
 # huashu-skills
 
+<p align="center">
+  <img src="assets/hero.gif" alt="huashu-skills Hero Animation" />
+  <br/>
+  <sub>动画由 <a href="https://github.com/alchaincyf/huashu-design">huashu-design</a> skill 制作</sub>
+</p>
+
 花叔的 Claude Code Skills 合集。21个经过实战验证的内容创作技能，覆盖从选题到发布的完整工作流。
 
 > 花叔 | AI Native Coder · 独立开发者 · 30万+粉丝
