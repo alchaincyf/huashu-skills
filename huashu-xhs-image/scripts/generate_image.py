@@ -77,8 +77,12 @@ def main():
     from google.genai import types
     from PIL import Image as PILImage
 
-    # Initialise client
-    client = genai.Client(api_key=api_key)
+    # Initialise client (GEMINI_BASE_URL overrides the official endpoint, e.g. for a proxy)
+    base_url = os.environ.get("GEMINI_BASE_URL")
+    if base_url:
+        client = genai.Client(api_key=api_key, http_options=types.HttpOptions(base_url=base_url))
+    else:
+        client = genai.Client(api_key=api_key)
 
     # Set up output path
     output_path = Path(args.filename)

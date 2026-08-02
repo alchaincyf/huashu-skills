@@ -119,7 +119,12 @@ def main():
     from google import genai
     from google.genai import types
 
-    client = genai.Client(api_key=api_key)
+    # GEMINI_BASE_URL overrides the official endpoint, e.g. for a proxy
+    base_url = os.environ.get("GEMINI_BASE_URL")
+    if base_url:
+        client = genai.Client(api_key=api_key, http_options=types.HttpOptions(base_url=base_url))
+    else:
+        client = genai.Client(api_key=api_key)
     model_id = MODELS[args.model]
 
     # Build config

@@ -14,6 +14,7 @@ description: |
 - `uv`（Python包管理器）
 - `yt-dlp`（抖音视频下载，需 `pip install yt-dlp` 或 `brew install yt-dlp`）
 - `GEMINI_API_KEY` 环境变量（用于Gemini视频分析，从 https://aistudio.google.com/apikey 获取）
+- `GEMINI_BASE_URL` 环境变量（可选，自定义API端点如代理/中转，不设置则用官方端点）
 - Chrome浏览器已登录抖音（用于提取下载Cookie）
 
 **路径约定**：下文中 `SKILL_DIR` 指本SKILL.md所在目录的绝对路径。运行脚本前，先用 `dirname` 或 Glob 工具确定SKILL.md的实际位置，替换 `SKILL_DIR`。
