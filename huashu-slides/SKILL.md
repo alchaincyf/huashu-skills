@@ -329,6 +329,9 @@ Generate AI illustrations for key slides, then create HTML slide files.
 
 **Illustration Generation** — use `nano-banana-pro` skill:
 
+> ⚠️ `nano-banana-pro` 是一个独立的外部 skill，**不随本仓库分发**。如果你的 `~/.claude/skills/` 下没有它，直接用本仓库自带的等价脚本（同样调用 Gemini 3 Pro Image API，默认 16:9，正好适配 slides）：
+> `uv run <本仓库路径>/huashu-wechat-image/scripts/generate_image.py --prompt "..." --filename "..." --resolution 2K`
+
 ```bash
 export $(grep GEMINI_API_KEY ~/.claude/.env) && \
 uv run ~/.claude/skills/nano-banana-pro/scripts/generate_image.py \
@@ -504,6 +507,8 @@ uv run ~/.claude/skills/nano-banana-pro/scripts/generate_image.py \
   --resolution 2K
 ```
 
+> 没有 `nano-banana-pro` 时同样可换用本仓库的 `huashu-wechat-image/scripts/generate_image.py`（见 Step 3-A 的说明）。
+
 **Quality check after generation:**
 1. **Text accuracy** — verify all Chinese/English text rendered correctly
 2. **Layout** — elements positioned as described
@@ -619,7 +624,7 @@ npx playwright screenshot "file:///path/to/slide.html" preview.png \
 | Skill | Role |
 |-------|------|
 | `pptx` | Advanced PPTX creation/editing (html2pptx, templates) |
-| `nano-banana-pro` | AI illustration generation (Gemini 3 Pro Image) |
+| `nano-banana-pro` | AI illustration generation (Gemini 3 Pro Image)。外部 skill 不随本仓库分发，未安装时用本仓库 `huashu-wechat-image/scripts/generate_image.py` 代替 |
 | `multi-model` | External AI for content drafting |
 | `design-philosophy` | 20种设计哲学深度参考（风格DNA + 场景模板 + 评审标准）。Professional/Editorial风格的详细提示词和评审指南在此 |
 
