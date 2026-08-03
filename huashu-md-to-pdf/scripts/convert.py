@@ -539,6 +539,13 @@ def get_apple_css():
         page-break-inside: avoid;
     }
 
+    /* 图片：不写 max-width 会让宽图横向溢出页面 */
+    img {
+        max-width: 100%;
+        height: auto;
+        page-break-inside: avoid;
+    }
+
     /* 强调 */
     strong {
         color: #1d1d1f;
@@ -571,7 +578,40 @@ def get_apple_css():
     }
     """
 
-def convert_markdown_to_pdf(input_file, output_file=None, title=None, author=None, subtitle=None):
+def warn_missing_images(html, base_dir):
+    """检查 HTML 里的本地图片能不能找到，找不到就出声
+
+    weasyprint 解析不到图片时是静默跳过的，PDF 照样生成、只是图没了。
+    这里提前扫一遍，让失败可见。
+    """
+    import html as html_mod
+    from urllib.parse import unquote, urlparse
+
+    missing = []
+    # 单引号和双引号都要收：markdown2 会把手写的 <img src='...'> 原样透传，
+    # 只认双引号会漏掉它们——漏报比误报更糟，那正是这个函数要消灭的静默。
+    for src_raw in re.findall(r'<img[^>]+\bsrc=(?:"([^"]*)"|\'([^\']*)\')', html):
+        src = src_raw[0] or src_raw[1]
+        # HTML 实体要先还原再查文件：weasyprint 拿到的是解码后的路径，
+        # 不解码会把 a&amp;b.png 这种真实存在的文件误报成缺失。
+        src = html_mod.unescape(src)
+        parsed = urlparse(src)
+        if parsed.scheme in ('http', 'https', 'data'):
+            continue
+        path = unquote(parsed.path)
+        candidate = Path(path) if parsed.scheme == 'file' else base_dir / path
+        if not candidate.exists():
+            missing.append(src)
+
+    if missing:
+        print(f"⚠️  有 {len(missing)} 张图片找不到，PDF 里会缺失：")
+        for src in missing:
+            print(f"     - {src}")
+        print(f"   （相对路径是相对于 {base_dir} 解析的）")
+
+
+def convert_markdown_to_pdf(input_file, output_file=None, title=None, author=None,
+                            subtitle=None):
     """主转换函数"""
 
     # 读取输入文件
@@ -627,8 +667,15 @@ def convert_markdown_to_pdf(input_file, output_file=None, title=None, author=Non
     if not output_file:
         output_file = str(Path(input_file).with_suffix('.pdf'))
 
+    # base_url 必须给：不给的话 markdown 里的相对路径图片（含中文目录名）
+    # 一张都解析不到，weasyprint 还不报错，PDF 静默少图。
+    # 用输入文件自身的 file:// URI，相对路径就从它所在目录开始算。
+    source_path = Path(input_file).resolve()
+    base_url = source_path.as_uri()
+    warn_missing_images(full_html, source_path.parent)
+
     css = CSS(string=get_apple_css())
-    HTML(string=full_html).write_pdf(output_file, stylesheets=[css])
+    HTML(string=full_html, base_url=base_url).write_pdf(output_file, stylesheets=[css])
 
     print(f"✅ 成功生成: {output_file}")
 

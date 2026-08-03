@@ -33,6 +33,25 @@ python scripts/convert.py input.md -o "我的白皮书.pdf"
 python scripts/convert.py input.md --title "技术白皮书" --author "花叔"
 ```
 
+### 图片路径
+
+Markdown 里的相对路径图片，是**相对 md 文件自身所在目录**解析的，目录名和文件名带中文都可以：
+
+```markdown
+![示意图](图片/架构图.png)     ← 和 md 文件同级的「图片」目录
+![示意图](./assets/arch.png)
+```
+
+找不到的图片会在转换时打印警告并列出路径。以前这种情况是静默跳过的，PDF 照样生成、只是没有图。
+
+### 已知未解决：某些环境下 macOS「预览」打开是乱码
+
+有用户报告生成的 PDF 在 macOS「预览」里是乱码，浏览器打开正常。**这个问题还没有解决办法**，原因也还没定位——在一台用 Arial Unicode MS 渲染中文的机器上复现不出来，而报告者的字体环境和 weasyprint 版本都不清楚。
+
+**不要试图用 weasyprint 的 `full_fonts=True` 绕过它。** 实测：macOS 上的中文字体（PingFang.ttc、Songti.ttc、Hiragino Sans GB.ttc）都是 TrueType Collection，`full_fonts=True` 会把整个 collection 的原始字节塞进 PDF 的 `/FontFile2`（magic 是 `ttcf` 而不是合法的 `\x00\x01\x00\x00`），结果是**文件暴涨到几十 MB，而且照样乱码**——实测一段中文从 10 KB 变成 43 MB，渲染出来是「Oě 据⊤」。它让问题更糟，不是逃生出口。
+
+碰到乱码时可以先试：升级 weasyprint、或在 CSS 里换一个非 collection 的字体。
+
 ### Markdown 文档要求
 
 你的 Markdown 文档应该遵循以下结构：
