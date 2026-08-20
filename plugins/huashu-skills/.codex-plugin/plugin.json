@@ -1,0 +1,39 @@
+{
+  "name": "huashu-skills",
+  "version": "0.1.0",
+  "description": "21 content-creation skills from 花叔: PPTX decks, Douyin scripts, research, images, speech coach, agent swarm.",
+  "author": {
+    "name": "花叔 (Huashu)",
+    "url": "https://github.com/alchaincyf"
+  },
+  "homepage": "https://github.com/alchaincyf/huashu-skills#readme",
+  "repository": "https://github.com/alchaincyf/huashu-skills",
+  "keywords": [
+    "codex",
+    "slides",
+    "content",
+    "writing",
+    "video",
+    "research"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Huashu Skills",
+    "shortDescription": "Content-creation skill pack",
+    "longDescription": "A pack of 21 skills covering the full content pipeline: PPTX decks, Douyin/X scripts, research, WeChat/Xiaohongshu images, speech coaching, and agent swarm.",
+    "developerName": "花叔 (Huashu)",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/alchaincyf/huashu-skills",
+    "defaultPrompt": [
+      "Use huashu-slides to turn this outline into a PPTX. Guided mode, Path A.",
+      "Use huashu-proofreading on this draft.",
+      "Use huashu-topic-gen for three title options on this theme."
+    ],
+    "brandColor": "#D4480B"
+  }
+}

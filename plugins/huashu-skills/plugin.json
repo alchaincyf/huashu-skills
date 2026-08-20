@@ -1,0 +1,19 @@
+{
+  "name": "huashu-skills",
+  "description": "21 content-creation skills from 花叔: PPTX decks, Douyin scripts, research, images, speech coach, agent swarm.",
+  "version": "0.1.0",
+  "author": {
+    "name": "花叔 (Huashu)",
+    "url": "https://github.com/alchaincyf"
+  },
+  "homepage": "https://github.com/alchaincyf/huashu-skills#readme",
+  "repository": "https://github.com/alchaincyf/huashu-skills",
+  "keywords": [
+    "slides",
+    "content",
+    "writing",
+    "video",
+    "research",
+    "grok"
+  ]
+}

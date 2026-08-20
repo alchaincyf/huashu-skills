@@ -1,0 +1,25 @@
+{
+  "name": "huashu-skills",
+  "description": "花叔 content-creation skills — slides, scripts, research, images, speech, swarm",
+  "owner": {
+    "name": "花叔 (Huashu)",
+    "url": "https://github.com/alchaincyf"
+  },
+  "plugins": [
+    {
+      "name": "huashu-skills",
+      "description": "21 battle-tested content skills: PPTX decks, Douyin scripts, research, images, speech coach, agent swarm.",
+      "version": "0.1.0",
+      "author": {
+        "name": "花叔 (Huashu)",
+        "url": "https://github.com/alchaincyf"
+      },
+      "category": "productivity",
+      "tags": ["slides", "content", "writing", "video", "research"],
+      "source": {
+        "type": "local",
+        "path": "./plugins/huashu-skills"
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Huashu Skills"
+  short_description: "Content pipeline: decks, scripts, research, images, speech"
+  default_prompt: "Use $huashu-slides. Ask collaboration mode and Path A vs Path B first, then produce a PPTX."
+
+policy:
+  allow_implicit_invocation: true
