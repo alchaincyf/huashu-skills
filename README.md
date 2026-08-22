@@ -43,7 +43,7 @@ codex plugin add huashu-skills@huashu-skills
 pi install git:github.com/alchaincyf/huashu-skills
 ```
 
-每个 `huashu-*` 目录仍是 Skill 源。`plugins/huashu-skills/skills/` 是 **文件拷贝**（不是 symlink）。改 skill 后跑 `bash scripts/build-plugin-leaf.sh`。
+每个 `huashu-*` 目录仍是 Skill 源。`plugins/huashu-skills/skills/` 是 **git 跟踪文件的拷贝**（不是 symlink，不打包未跟踪文件）。改 skill 后跑 `node scripts/build-plugin-leaf.mjs`，发版前 `node scripts/check-plugin-release.mjs --write`。
 
 
 

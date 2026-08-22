@@ -1,0 +1,40 @@
+{
+  "name": "huashu-skills",
+  "private": true,
+  "description": "21 content-creation skills from 花叔 (Huashu).",
+  "type": "module",
+  "keywords": ["pi-package", "agent-skill", "content-creation"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alchaincyf/huashu-skills.git"
+  },
+  "homepage": "https://github.com/alchaincyf/huashu-skills#readme",
+  "scripts": {
+    "test": "node --test test/plugin-marketplace.test.mjs"
+  },
+  "pi": {
+    "skills": [
+      "./huashu-agent-swarm",
+      "./huashu-article-edit",
+      "./huashu-article-to-x",
+      "./huashu-data-pro",
+      "./huashu-design",
+      "./huashu-douyin-script",
+      "./huashu-image-upload",
+      "./huashu-info-search",
+      "./huashu-material-search",
+      "./huashu-md-to-pdf",
+      "./huashu-prompt-save",
+      "./huashu-proofreading",
+      "./huashu-research",
+      "./huashu-script-polish",
+      "./huashu-slides",
+      "./huashu-speech-coach",
+      "./huashu-topic-gen",
+      "./huashu-video-check",
+      "./huashu-video-outline",
+      "./huashu-wechat-image",
+      "./huashu-xhs-image"
+    ]
+  }
+}
