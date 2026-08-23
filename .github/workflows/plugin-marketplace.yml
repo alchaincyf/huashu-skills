@@ -1,0 +1,40 @@
+name: plugin-marketplace
+
+on:
+  pull_request:
+  push:
+    branches: [master, main]
+
+jobs:
+  plugin-leaf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Generated plugin leaf must match the Skill SSoT
+        run: node scripts/build-plugin-leaf.mjs --check
+      - name: Plugin bytes must match their immutable release identity
+        run: node scripts/check-plugin-release.mjs
+      - name: Plugin marketplace contract tests
+        run: node --test test/plugin-marketplace.test.mjs
+      - name: Plugin payload must not contain symlinks
+        run: |
+          set -euo pipefail
+          if find "$GITHUB_WORKSPACE/huashu-"* "$GITHUB_WORKSPACE/plugins/huashu-skills" -type l 2>/dev/null | grep -q .; then
+            echo '::error::plugin payload must not contain symlinks'
+            find "$GITHUB_WORKSPACE/huashu-"* "$GITHUB_WORKSPACE/plugins/huashu-skills" -type l
+            exit 1
+          fi
+      - name: Symlink-disabled checkout still contains materialized skills
+        run: |
+          set -euo pipefail
+          git clone -c core.symlinks=false --quiet "$GITHUB_WORKSPACE" /tmp/huashu-skills-nosym
+          test -f /tmp/huashu-skills-nosym/plugins/huashu-skills/skills/huashu-slides/SKILL.md
+          test -f /tmp/huashu-skills-nosym/plugins/huashu-skills/skills/huashu-slides/agents/openai.yaml
+          if find /tmp/huashu-skills-nosym/plugins/huashu-skills -type l | grep -q .; then
+            echo '::error::symlink-disabled checkout still has links'
+            find /tmp/huashu-skills-nosym/plugins/huashu-skills -type l
+            exit 1
+          fi

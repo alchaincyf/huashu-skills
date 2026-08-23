@@ -21,6 +21,32 @@
 
 例如：`/install-skill https://github.com/alchaincyf/huashu-skills/tree/master/huashu-slides`
 
+## 插件市场（Claude / Grok / Codex / Pi）
+
+单技能仍可用 `/install-skill`。整包一次装完：
+
+```bash
+# Claude Code
+claude plugin marketplace add alchaincyf/huashu-skills
+claude plugin install huashu-skills@huashu-skills --scope user
+
+# Grok
+grok plugin marketplace add alchaincyf/huashu-skills
+grok plugin install huashu-skills --trust
+grok plugin enable huashu-skills
+
+# Codex
+codex plugin marketplace add alchaincyf/huashu-skills
+codex plugin add huashu-skills@huashu-skills
+
+# Pi
+pi install git:github.com/alchaincyf/huashu-skills
+```
+
+每个 `huashu-*` 目录仍是 Skill 源。`plugins/huashu-skills/skills/` 是 **git 跟踪文件的拷贝**（不是 symlink，不打包未跟踪文件）。改 skill 后跑 `node scripts/build-plugin-leaf.mjs`，发版前 `node scripts/check-plugin-release.mjs --write`。
+
+
+
 ## Skills 一览
 
 ### 端到端工作流
