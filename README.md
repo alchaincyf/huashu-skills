@@ -227,7 +227,7 @@ cp -r /tmp/huashu-skills/huashu-slides ~/.claude/skills/
 
 1. 安装留痕：git clone装的skill自带`.git`（安装日期、版本尽在其中）；复制安装的skill由agent在目录里写一个`.huashu-skill-meta.json`，记录来源仓库、安装时commit、安装 / 检查日期（格式见updater的SKILL.md）
 2. 一键检查：`python3 ~/.claude/skills/huashu-skill-updater/scripts/check_updates.py`扫描全部已装的花叔系skill，逐个对比远程仓库最新commit，报告哪些落后、怎么更新
-3. 自动触发：会话里用到任何花叔系skill时，若它超过30天没检查过更新，agent会在完成当前任务后提醒一句。想更省心就挂个cron每月1号跑一次（命令见updater的SKILL.md）
+3. 自动触发：每个独立仓库skill的SKILL.md末尾自带「版本自检」段——agent使用时读目录里的`.last-update-check`（一行日期），30天内检查过就静默跳过、绝不打扰；到期才联网对比一次，且只在确认落后时于任务完成后提醒一句，更新与否由用户决定。想更省心就挂个cron每月1号跑一次updater（命令见其SKILL.md，`--mark-checked`会同步刷新各skill的自检日期）
 
 ## 给AI Agent的协议
 

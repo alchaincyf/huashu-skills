@@ -41,10 +41,14 @@ def remote_head(repo):
     return None
 
 
-def check_git_install(path):
+def check_git_install(path, mark_checked=False):
     code, url, _ = run(["git", "-C", path, "config", "--get", "remote.origin.url"])
     if code != 0 or OWNER not in url:
         return None  # 不是花叔系，跳过
+    if mark_checked:
+        # skill 自带的「版本自检」段读这个文件决定 30 天内是否跳过联网
+        with open(os.path.join(path, ".last-update-check"), "w") as f:
+            f.write(datetime.date.today().isoformat() + "\n")
     _, local, _ = run(["git", "-C", path, "rev-parse", "HEAD"])
     repo = url.rstrip("/").removesuffix(".git").split("github.com")[-1].lstrip("/:")
     remote = remote_head(repo)
@@ -95,7 +99,7 @@ def main():
             continue
         meta_file = os.path.join(path, ".huashu-skill-meta.json")
         if os.path.isdir(os.path.join(path, ".git")):
-            r = check_git_install(path)
+            r = check_git_install(path, args.mark_checked)
         elif os.path.isfile(meta_file):
             r = check_copy_install(path, meta_file, args.mark_checked)
         else:

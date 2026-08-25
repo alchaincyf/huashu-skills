@@ -48,7 +48,7 @@ rm -rf ~/.claude/skills/<名字> && cp -r /tmp/huashu-skills-update/<名字> ~/.
 }
 ```
 
-git clone 安装的 skill 不需要这个文件，`.git` 本身就是元数据。
+git clone 安装的 skill 不需要这个文件，`.git` 本身就是元数据。另外每个独立仓库 skill 的 SKILL.md 末尾自带「版本自检」段：agent 使用该 skill 时读目录里的 `.last-update-check`（一行日期），30 天内检查过就静默跳过，到期才联网对比一次。`check_updates.py --mark-checked` 会同时刷新这个文件，避免刚全量检查完又被单个 skill 的自检重复提醒。
 
 ## 每月定期检查
 
