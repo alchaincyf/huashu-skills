@@ -6,7 +6,7 @@
   <sub>动画由 <a href="https://github.com/alchaincyf/huashu-design">huashu-design</a> skill制作</sub>
 </p>
 
-这里是花叔在GitHub上全部开源Skill的总目录，共52个，分三层收录。全部是标准Agent Skills格式（`SKILL.md`），Claude Code / Codex / Kimi Code等支持该格式的agent通用。
+这里是花叔在GitHub上全部开源Skill的总目录，共53个，分三层收录。全部是标准Agent Skills格式（`SKILL.md`），Claude Code / Codex / Kimi Code等支持该格式的agent通用。
 
 > 花叔 | AI Native Coder · 独立开发者 · 全网50万+读者
 > 代表作：小猫补光灯（App Store付费榜Top1）·《一本书玩转DeepSeek》· 女娲Skill生态
@@ -17,7 +17,7 @@
 - [30秒上手](#30秒上手)
 - [全景一览](#全景一览)
 - [按需求找Skill](#按需求找skill)
-- [旗舰Skills](#旗舰skills)（16个独立仓库）
+- [旗舰Skills](#旗舰skills)（17个独立仓库）
 - [人物视角Skills](#人物视角skills)（14个独立仓库）
 - [内置Skills](#内置skills)（22个，本仓库）
 - [安装指南](#安装指南)
@@ -43,7 +43,7 @@ git clone https://github.com/alchaincyf/huashu-design.git ~/.claude/skills/huash
 
 | 层 | 数量 | 是什么 | 怎么装 |
 |---|---|---|---|
-| [旗舰Skills](#旗舰skills) | 16 | 各自深耕一个领域的完整系统，独立仓库 | git clone一条命令 |
+| [旗舰Skills](#旗舰skills) | 17 | 各自深耕一个领域的完整系统，独立仓库 | git clone一条命令 |
 | [人物视角Skills](#人物视角skills) | 14 | 女娲蒸馏的人物思维操作系统，独立仓库 | git clone一条命令 |
 | [内置Skills](#内置skills) | 22 | 轻量内容创作技能+更新检查工具，就在本仓库 | 复制子目录 |
 
@@ -56,6 +56,7 @@ git clone https://github.com/alchaincyf/huashu-design.git ~/.claude/skills/huash
 | 高保真原型 / 幻灯片 / 动画 / 「做个好看的页面」 | [huashu-design](https://github.com/alchaincyf/huashu-design) |
 | AI生图的prompt（封面 / 海报 / 信息图） | [huashu-gpt-image](https://github.com/alchaincyf/huashu-gpt-image) |
 | 数据分析、Excel清洗对账、让数字经得起追问 | [huashu-excel](https://github.com/alchaincyf/huashu-excel) |
+| 机构级研究报告 / 白皮书 / 年度调研 / arXiv论文 | [huashu-report](https://github.com/alchaincyf/huashu-report) |
 | 任意文件（PDF/DOCX/EPUB/网页）转Markdown，md出精美HTML / DOCX | [huashu-md-html](https://github.com/alchaincyf/huashu-md-html) |
 | Markdown转专业PDF白皮书 | 内置[huashu-md-to-pdf](huashu-md-to-pdf/) |
 | AI视频生成（白模驱动，画面可控） | [seedance-skill](https://github.com/alchaincyf/seedance-skill) |
@@ -91,6 +92,7 @@ git clone https://github.com/alchaincyf/huashu-design.git ~/.claude/skills/huash
 |---|---|---|
 | [huashu-excel](https://github.com/alchaincyf/huashu-excel) | ![](https://img.shields.io/github/stars/alchaincyf/huashu-excel?style=flat&label=%E2%98%85) | 数据分析全流程：体检脏表 → 清洗 → 定口径 → 算指标 → 对账 → 报告，依赖仅openpyxl |
 | [huashu-md-html](https://github.com/alchaincyf/huashu-md-html) | ![](https://img.shields.io/github/stars/alchaincyf/huashu-md-html?style=flat&label=%E2%98%85) | md流水线：万物（PDF/DOCX/EPUB/网页/音频）转干净md，md加工成出版级HTML / DOCX，四套反AI slop主题 |
+| [huashu-report](https://github.com/alchaincyf/huashu-report) | ![](https://img.shields.io/github/stars/alchaincyf/huashu-report?style=flat&label=%E2%98%85) | 机构级研究报告：六种报告原型 + 图表模式库 + 三文件生产流水线，规范提炼自2026年42份顶级机构报告实测 |
 
 ### 视频
 
