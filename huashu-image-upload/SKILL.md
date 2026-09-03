@@ -77,13 +77,13 @@ description: 文章配图一键生成并上传图床，自动插入Markdown链�
 ### 上传方式
 ```python
 # 调用上传脚本（在Bash中）
-python3 /Users/alchain/Documents/写作/tools/upload_image.py <图片URL或本地路径>
+python3 tools/upload_image.py <图片URL或本地路径>
 
 # 处理网络图片（如AI生成的临时链接）
-python3 /Users/alchain/Documents/写作/tools/upload_image.py "https://example.com/ai-generated.jpg"
+python3 tools/upload_image.py "https://example.com/ai-generated.jpg"
 
 # 处理本地图片
-python3 /Users/alchain/Documents/写作/tools/upload_image.py "/Users/alchain/Pictures/image.png"
+python3 tools/upload_image.py "~/Pictures/image.png"
 
 # 脚本自动返回ImgBB永久链接
 ```
@@ -156,7 +156,7 @@ python3 /Users/alchain/Documents/写作/tools/upload_image.py "/Users/alchain/Pi
 ### Step 3: 上传到图床，获取永久链接
 ```bash
 # 对每张图片调用上传脚本
-python3 /Users/alchain/Documents/写作/tools/upload_image.py <图片URL>
+python3 tools/upload_image.py <图片URL>
 ```
 
 ### Step 4: 在文章中插入图片

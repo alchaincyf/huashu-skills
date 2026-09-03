@@ -286,8 +286,9 @@ TEXT TO RENDER:
 #### 3-B-3. 生成
 
 ```bash
+# scripts/ 路径相对本 skill 目录（脚本随 skill 一起分发，不在别处）
 export $(grep GEMINI_API_KEY ~/.claude/.env) && \
-uv run /Users/alchain/Documents/写作/.claude/skills/wechat-image/scripts/generate_image.py \
+uv run scripts/generate_image.py \
   --prompt "[完整prompt]" \
   --filename "[timestamp]-wechat-[类型]-[描述].png" \
   --aspect [cover|wide|standard|square]
@@ -330,7 +331,7 @@ uv run /Users/alchain/Documents/写作/.claude/skills/wechat-image/scripts/gener
 ## Step 4: 上传图床
 
 ```bash
-python3 /Users/alchain/Documents/写作/tools/upload_image.py "[图片路径]"
+python3 tools/upload_image.py "[图片路径]"
 ```
 
 返回 ImgBB 永久链接。**公众号文章必须使用网络链接**，本地路径在发布后失效。

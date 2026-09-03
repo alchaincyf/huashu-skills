@@ -209,7 +209,7 @@ description: 三遍审校降低AI检测率，让文章更有人味。当用户�
 使用Grep工具搜索 `/写作参考/个人素材库/全部即刻动态.csv`：
 ```
 pattern: "关键词1|关键词2"
-path: /Users/alchain/Documents/写作/写作参考/个人素材库/全部即刻动态.csv
+path: 写作参考/个人素材库/全部即刻动态.csv
 output_mode: content
 -n: true
 ```

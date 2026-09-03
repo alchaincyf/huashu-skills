@@ -175,8 +175,9 @@ IMPORTANT: Do NOT include any personal signature, watermark, or author name like
 ### AI生成命令
 
 ```bash
+# scripts/ 路径相对本 skill 目录（脚本随 skill 一起分发，不在别处）
 export $(grep GEMINI_API_KEY ~/.claude/.env) && \
-uv run /Users/alchain/Documents/写作/.claude/skills/xhs-image/scripts/generate_image.py \
+uv run scripts/generate_image.py \
   --prompt "[完整prompt]" \
   --filename "[方向]-[风格]-AI.png" \
   --resolution 2K
@@ -228,7 +229,7 @@ open "[图片路径1]" "[图片路径2]" "[图片路径3]"
 ## Step 5: 上传图床
 
 ```bash
-python3 /Users/alchain/Documents/写作/tools/upload_image.py "[图片路径]"
+python3 tools/upload_image.py "[图片路径]"
 ```
 
 返回 ImgBB 永久链接。
