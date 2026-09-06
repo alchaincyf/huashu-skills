@@ -17,7 +17,7 @@
 - [30秒上手](#30秒上手)
 - [全景一览](#全景一览)
 - [按需求找Skill](#按需求找skill)
-- [旗舰Skills](#旗舰skills)（17个独立仓库）
+- [旗舰Skills](#旗舰skills)（18个独立仓库）
 - [人物视角Skills](#人物视角skills)（14个独立仓库）
 - [内置Skills](#内置skills)（22个，本仓库）
 - [安装指南](#安装指南)
@@ -43,7 +43,7 @@ git clone https://github.com/alchaincyf/huashu-design.git ~/.claude/skills/huash
 
 | 层 | 数量 | 是什么 | 怎么装 |
 |---|---|---|---|
-| [旗舰Skills](#旗舰skills) | 17 | 各自深耕一个领域的完整系统，独立仓库 | git clone一条命令 |
+| [旗舰Skills](#旗舰skills) | 18 | 各自深耕一个领域的完整系统，独立仓库 | git clone一条命令 |
 | [人物视角Skills](#人物视角skills) | 14 | 女娲蒸馏的人物思维操作系统，独立仓库 | git clone一条命令 |
 | [内置Skills](#内置skills) | 22 | 轻量内容创作技能+更新检查工具，就在本仓库 | 复制子目录 |
 
@@ -70,11 +70,12 @@ git clone https://github.com/alchaincyf/huashu-design.git ~/.claude/skills/huash
 | 微信读书荐书、书单、读书笔记 | [huashu-weread](https://github.com/alchaincyf/huashu-weread) |
 | 借乔布斯 / 芒格 / 费曼……的视角思考 | [人物视角Skills](#人物视角skills)任选一位 |
 | 选题、大纲、审校、配图等内容创作流水线 | [内置Skills](#内置skills) |
+| 让agent操控Mac原生app、截窗口取证、做桌面客户端实测 | [huashu-mac-use](https://github.com/alchaincyf/huashu-mac-use) |
 | 检查装过的skill有没有新版本 | 内置[huashu-skill-updater](huashu-skill-updater/) |
 
 ## 旗舰Skills
 
-16个独立仓库，每个都是完整系统。安装：`git clone https://github.com/alchaincyf/<仓库名>.git ~/.claude/skills/<仓库名>`（dukou除外，见表格备注）。
+18个独立仓库，每个都是完整系统。安装：`git clone https://github.com/alchaincyf/<仓库名>.git ~/.claude/skills/<仓库名>`（dukou除外，见表格备注）。
 
 ### 设计与视觉
 
@@ -85,6 +86,12 @@ git clone https://github.com/alchaincyf/huashu-design.git ~/.claude/skills/huash
 | [huashu-icon-set](https://github.com/alchaincyf/huashu-icon-set) | ![](https://img.shields.io/github/stars/alchaincyf/huashu-icon-set?style=flat&label=%E2%98%85) | 端到端为项目生成风格统一的图标集：4×4网格批量生成+逐个精度兜底+智能抠图（豆包环境专用，依赖内置image_gen） |
 | [huashu-slide-doubao](https://github.com/alchaincyf/huashu-slide-doubao) | ![](https://img.shields.io/github/stars/alchaincyf/huashu-slide-doubao?style=flat&label=%E2%98%85) | 豆包环境专用视觉物料生产：slides+公众号封面+视频封面，走内置image_gen零API费用 |
 | [huashu-slide-codex](https://github.com/alchaincyf/huashu-slide-codex) | ![](https://img.shields.io/github/stars/alchaincyf/huashu-slide-codex?style=flat&label=%E2%98%85) | Codex环境专用视觉物料生产：同上，走Codex内置image_gen |
+
+### 电脑操控
+
+| 仓库 | Stars | 一句话 |
+|---|---|---|
+| [huashu-mac-use](https://github.com/alchaincyf/huashu-mac-use) | ![](https://img.shields.io/github/stars/alchaincyf/huashu-mac-use?style=flat&label=%E2%98%85) | 让agent操控Mac上没有API的原生app：探测选层（CDP / AX / 坐标 / 像素），读后台写过闸不打扰用户，每步回读取证，收工回流进档案；Swift内核+CDP工具，任意runtime可装 |
 
 ### 数据与文档
 

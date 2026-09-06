@@ -1,6 +1,6 @@
 {
   "_readme": "花叔全部开源 Agent Skills 的机器可读目录。给 AI agent 用：按 keywords/summary 定位 skill 后，subdir 为 null 时执行 `git clone https://github.com/alchaincyf/<repo>.git ~/.claude/skills/<repo>`；subdir 非空时 clone 仓库到临时目录后把 subdir 文件夹复制为 `~/.claude/skills/<name>/`，并在该目录写 .huashu-skill-meta.json（字段：name/repo/subdir/commit=clone时HEAD sha/installed_at/last_checked）。安装后验证 SKILL.md 存在。更新检查：用 huashu-skill-updater 的 scripts/check_updates.py，超过 30 天未检查的 skill 应在使用时提醒。详细协议见 README.md「给 AI Agent 的安装协议」。",
-  "updated": "2026-09-01",
+  "updated": "2026-09-06",
   "owner": "alchaincyf",
   "layers": {
     "flagship": "旗舰 Skills，独立仓库的完整系统",
@@ -24,6 +24,25 @@
         "可视化",
         "HTML",
         "design"
+      ]
+    },
+    {
+      "name": "huashu-mac-use",
+      "layer": "flagship",
+      "category": "电脑操控",
+      "repo": "huashu-mac-use",
+      "subdir": null,
+      "summary": "让 agent 操控 Mac 上没有 API 的原生 app：探测选层（CDP / AX / 坐标 / 像素）、读后台写过闸不打扰用户、每步回读与取证、收工回流进档案；含 Swift 内核与 CDP 工具",
+      "keywords": [
+        "computer use",
+        "操控电脑",
+        "macOS",
+        "原生app",
+        "截图取证",
+        "CDP",
+        "Electron",
+        "自动化",
+        "mac"
       ]
     },
     {
