@@ -1,0 +1,5 @@
+Third-party components
+
+huashu-data-pro/scripts/html2pptx.js is taken from Anthropic's pptx skill
+(© 2025 Anthropic, PBC. All rights reserved.) and is NOT covered by the MIT
+License in LICENSE. Its use is governed by Anthropic's own terms.
