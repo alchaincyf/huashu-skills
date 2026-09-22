@@ -1,979 +1,1019 @@
-/**
- * html2pptx - Convert HTML slide to pptxgenjs slide with positioned elements
- *
- * USAGE:
- *   const pptx = new pptxgen();
- *   pptx.layout = 'LAYOUT_16x9';  // Must match HTML body dimensions
- *
- *   const { slide, placeholders } = await html2pptx('slide.html', pptx);
- *   slide.addChart(pptx.charts.LINE, data, placeholders[0]);
- *
- *   await pptx.writeFile('output.pptx');
- *
- * FEATURES:
- *   - Converts HTML to PowerPoint with accurate positioning
- *   - Supports text, images, shapes, and bullet lists
- *   - Extracts placeholder elements (class="placeholder") with positions
- *   - Handles CSS gradients, borders, and margins
- *
- * VALIDATION:
- *   - Uses body width/height from HTML for viewport sizing
- *   - Throws error if HTML dimensions don't match presentation layout
- *   - Throws error if content overflows body (with overflow details)
- *
- * RETURNS:
- *   { slide, placeholders } where placeholders is an array of { id, x, y, w, h }
- */
+// Copyright (c) 2026 alchaincyf (花叔). MIT License.
+//
+// 独立实现：按一份只描述输入、输出和可观察行为的规格从零编写，实现过程中没有
+// 查看其他 html2pptx 的源码。依赖 Playwright 与 pptxgenjs 两个公开库。
+//
+// 职责：把一页 960pt×540pt（约定俗成，实际以 body 尺寸为准）的 HTML，用 Playwright
+// 起一个真实 Chromium 打开、量出每个元素的渲染结果（位置/尺寸/computed style），
+// 翻译成 pptxgenjs 的原生可编辑对象（文本框 / 形状 / 线条 / 图片）。
 
-const { chromium } = require('playwright');
+'use strict';
+
 const path = require('path');
-const sharp = require('sharp');
+const { chromium } = require('playwright');
 
-const PT_PER_PX = 0.75;
-const PX_PER_IN = 96;
-const EMU_PER_IN = 914400;
+// ---- 单位换算常量 ----
+const PT_PER_PX = 0.75; // CSS px -> pt
+const IN_PER_PX = 1 / 96; // CSS px -> inch
+const EMU_PER_INCH = 914400;
 
-// Helper: Get body dimensions and check for overflow
-async function getBodyDimensions(page) {
-  const bodyDimensions = await page.evaluate(() => {
-    const body = document.body;
-    const style = window.getComputedStyle(body);
+function toPt(px) {
+  return px * PT_PER_PX;
+}
+function toIn(px) {
+  return px * IN_PER_PX;
+}
 
+// ============================================================================
+// 浏览器内提取逻辑：作为字符串函数整体交给 page.evaluate 执行，运行在页面上下文里，
+// 不能依赖外层闭包变量（Playwright 序列化 Function.toString() 后在浏览器里重新求值）。
+// ============================================================================
+function extractPageDataInBrowser() {
+  const PT_PER_PX = 0.75;
+  function toPt(px) {
+    return px * PT_PER_PX;
+  }
+  function toIn(px) {
+    return px / 96;
+  }
+  const SINGLE_WEIGHT_FONTS = ['impact'];
+  const INLINE_TAGS = new Set(['SPAN', 'B', 'STRONG', 'I', 'EM', 'U']);
+  const TEXT_TAG_BG_CHECK = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'UL', 'OL', 'LI']);
+  const TEXT_ELEMENT_TAGS = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI']);
+  const MANUAL_BULLET_CHARS_VALIDATE = ['•', '-', '*', '▪', '▸', '○', '●', '◆', '◇', '■', '□'];
+  const MANUAL_BULLET_CHARS_STRIP = ['•', '-', '*', '▪', '▸'];
+
+  const errors = [];
+  const elements = [];
+  const placeholders = [];
+  const consumed = new Set();
+
+  // ---- 基础工具 ----
+  function parsePx(v) {
+    const n = parseFloat(v);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function rectOf(el) {
+    const r = el.getBoundingClientRect();
+    return { x: r.left, y: r.top, w: r.width, h: r.height };
+  }
+
+  function truncate(str, max) {
+    if (str.length <= max) return str;
+    return str.slice(0, max) + '...';
+  }
+
+  function collapseWs(s) {
+    return s.replace(/[\t\n\r ]+/g, ' ');
+  }
+
+  function parseColorString(str) {
+    if (!str) return null;
+    const m = /rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)/i.exec(str);
+    if (!m) return null;
+    const r = Math.max(0, Math.min(255, Math.round(parseFloat(m[1]))));
+    const g = Math.max(0, Math.min(255, Math.round(parseFloat(m[2]))));
+    const b = Math.max(0, Math.min(255, Math.round(parseFloat(m[3]))));
+    const hasAlpha = m[4] !== undefined;
+    const alpha = hasAlpha ? parseFloat(m[4]) : 1;
+    const hex = [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
+    return { hex, alpha, hasAlpha };
+  }
+
+  function isVisibleColor(c) {
+    return !!c && c.alpha > 0;
+  }
+
+  // {color, transparency?} —— 只有解析出显式 alpha 通道时才带 transparency
+  function fillFieldOf(c) {
+    const out = { color: c.hex };
+    if (c.hasAlpha) out.transparency = Math.round((1 - c.alpha) * 100);
+    return out;
+  }
+
+  function firstFontFamily(v) {
+    if (!v) return '';
+    const first = v.split(',')[0].trim();
+    return first.replace(/^["']|["']$/g, '');
+  }
+
+  function isSingleWeightFont(fontFace) {
+    return SINGLE_WEIGHT_FONTS.indexOf((fontFace || '').toLowerCase()) !== -1;
+  }
+
+  function normalizeAlign(v) {
+    return v === 'start' ? 'left' : v;
+  }
+
+  function parseLineHeightPt(lineHeightStr, fontSizePt) {
+    const v = parseFloat(lineHeightStr);
+    if (!isNaN(v) && /px\s*$/.test(String(lineHeightStr).trim())) {
+      return v * PT_PER_PX;
+    }
+    // 防御性兜底：真实 Chromium 的 computed line-height 基本总是已解析的 px 值，
+    // 这里的 fontSize*1.2 分支理论上不会命中。
+    return fontSizePt * 1.2;
+  }
+
+  function applyTextTransform(str, tt) {
+    if (tt === 'uppercase') return str.toUpperCase();
+    if (tt === 'lowercase') return str.toLowerCase();
+    if (tt === 'capitalize') return str.replace(/\b\w/g, (c) => c.toUpperCase());
+    return str;
+  }
+
+  function getBordersInfo(cs) {
     return {
-      width: parseFloat(style.width),
-      height: parseFloat(style.height),
-      scrollWidth: body.scrollWidth,
-      scrollHeight: body.scrollHeight
+      top: { w: parsePx(cs.borderTopWidth), c: cs.borderTopColor },
+      right: { w: parsePx(cs.borderRightWidth), c: cs.borderRightColor },
+      bottom: { w: parsePx(cs.borderBottomWidth), c: cs.borderBottomColor },
+      left: { w: parsePx(cs.borderLeftWidth), c: cs.borderLeftColor },
     };
-  });
-
-  const errors = [];
-  const widthOverflowPx = Math.max(0, bodyDimensions.scrollWidth - bodyDimensions.width - 1);
-  const heightOverflowPx = Math.max(0, bodyDimensions.scrollHeight - bodyDimensions.height - 1);
-
-  const widthOverflowPt = widthOverflowPx * PT_PER_PX;
-  const heightOverflowPt = heightOverflowPx * PT_PER_PX;
-
-  if (widthOverflowPt > 0 || heightOverflowPt > 0) {
-    const directions = [];
-    if (widthOverflowPt > 0) directions.push(`${widthOverflowPt.toFixed(1)}pt horizontally`);
-    if (heightOverflowPt > 0) directions.push(`${heightOverflowPt.toFixed(1)}pt vertically`);
-    const reminder = heightOverflowPt > 0 ? ' (Remember: leave 0.5" margin at bottom of slide)' : '';
-    errors.push(`HTML content overflows body by ${directions.join(' and ')}${reminder}`);
   }
 
-  return { ...bodyDimensions, errors };
-}
-
-// Helper: Validate dimensions match presentation layout
-function validateDimensions(bodyDimensions, pres) {
-  const errors = [];
-  const widthInches = bodyDimensions.width / PX_PER_IN;
-  const heightInches = bodyDimensions.height / PX_PER_IN;
-
-  if (pres.presLayout) {
-    const layoutWidth = pres.presLayout.width / EMU_PER_IN;
-    const layoutHeight = pres.presLayout.height / EMU_PER_IN;
-
-    if (Math.abs(layoutWidth - widthInches) > 0.1 || Math.abs(layoutHeight - heightInches) > 0.1) {
-      errors.push(
-        `HTML dimensions (${widthInches.toFixed(1)}" × ${heightInches.toFixed(1)}") ` +
-        `don't match presentation layout (${layoutWidth.toFixed(1)}" × ${layoutHeight.toFixed(1)}")`
-      );
+  function computeRectRadius(cs, widthPx, heightPx) {
+    const raw = (cs.borderTopLeftRadius || '0px').trim();
+    const m = /^(-?[\d.]+)(px|pt|%)?$/.exec(raw);
+    if (!m) return 0;
+    const val = parseFloat(m[1]);
+    const unit = m[2] || 'px';
+    if (!val) return 0;
+    if (unit === '%') {
+      if (val >= 50) return 1;
+      return ((val / 100) * Math.min(widthPx, heightPx)) / 96;
     }
+    if (unit === 'pt') return val / 72;
+    return val / 96;
   }
-  return errors;
-}
 
-function validateTextBoxPosition(slideData, bodyDimensions) {
-  const errors = [];
-  const slideHeightInches = bodyDimensions.height / PX_PER_IN;
-  const minBottomMargin = 0.5; // 0.5 inches from bottom
+  function parseBoxShadow(str) {
+    if (!str || str === 'none') return null;
+    if (/inset/i.test(str)) return null;
+    const colorMatch = str.match(/rgba?\([^)]+\)/i);
+    const colorParsed = colorMatch ? parseColorString(colorMatch[0]) : null;
+    const withoutColor = colorMatch ? str.replace(colorMatch[0], '') : str;
+    const nums = withoutColor.match(/-?[\d.]+px/g) || [];
+    if (nums.length < 2) return null;
+    const vals = nums.map((s) => parseFloat(s));
+    const offsetX = vals[0];
+    const offsetY = vals[1];
+    const blur = vals[2] || 0;
+    const offsetPt = Math.hypot(offsetX, offsetY) * PT_PER_PX;
+    let angleDeg = (Math.atan2(offsetY, offsetX) * 180) / Math.PI;
+    angleDeg = ((angleDeg % 360) + 360) % 360;
+    const blurPt = blur * PT_PER_PX;
+    const color = colorParsed ? colorParsed.hex : '000000';
+    const opacity = colorParsed && colorParsed.hasAlpha ? colorParsed.alpha : 0.5;
+    return { type: 'outer', angle: angleDeg, blur: blurPt, color, offset: offsetPt, opacity };
+  }
 
-  for (const el of slideData.elements) {
-    // Check text elements (p, h1-h6, list)
-    if (['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'list'].includes(el.type)) {
-      const fontSize = el.style?.fontSize || 0;
-      const bottomEdge = el.position.y + el.position.h;
-      const distanceFromBottom = slideHeightInches - bottomEdge;
+  function violationOf(el) {
+    const cs = getComputedStyle(el);
+    const bg = parseColorString(cs.backgroundColor);
+    if (isVisibleColor(bg)) return 'background';
+    const b = getBordersInfo(cs);
+    if (b.top.w > 0 || b.right.w > 0 || b.bottom.w > 0 || b.left.w > 0) return 'border';
+    if (cs.boxShadow && cs.boxShadow !== 'none') return 'shadow';
+    return null;
+  }
 
-      if (fontSize > 12 && distanceFromBottom < minBottomMargin) {
-        const getText = () => {
-          if (typeof el.text === 'string') return el.text;
-          if (Array.isArray(el.text)) return el.text.find(t => t.text)?.text || '';
-          if (Array.isArray(el.items)) return el.items.find(item => item.text)?.text || '';
-          return '';
-        };
-        const textPrefix = getText().substring(0, 50) + (getText().length > 50 ? '...' : '');
-
-        errors.push(
-          `Text box "${textPrefix}" ends too close to bottom edge ` +
-          `(${distanceFromBottom.toFixed(2)}" from bottom, minimum ${minBottomMargin}" required)`
-        );
+  // ---- 旋转角度 + 位置/尺寸（4.5 节） ----
+  function computeRotationDeg(cs) {
+    let angle = 0;
+    if (cs.writingMode === 'vertical-rl') angle += 90;
+    else if (cs.writingMode === 'vertical-lr') angle += 270;
+    const t = cs.transform;
+    if (t && t !== 'none') {
+      const rm = /rotate\(([-\d.]+)deg\)/.exec(t);
+      if (rm) {
+        angle += parseFloat(rm[1]);
+      } else {
+        const mm = /matrix\(([^)]+)\)/.exec(t);
+        if (mm) {
+          const parts = mm[1].split(',').map((s) => parseFloat(s.trim()));
+          angle += (Math.atan2(parts[1], parts[0]) * 180) / Math.PI;
+        }
       }
     }
+    return ((angle % 360) + 360) % 360;
   }
 
-  return errors;
-}
-
-// Helper: Add background to slide
-async function addBackground(slideData, targetSlide, tmpDir) {
-  if (slideData.background.type === 'image' && slideData.background.path) {
-    let imagePath = slideData.background.path.startsWith('file://')
-      ? slideData.background.path.replace('file://', '')
-      : slideData.background.path;
-    targetSlide.background = { path: imagePath };
-  } else if (slideData.background.type === 'color' && slideData.background.value) {
-    targetSlide.background = { color: slideData.background.value };
-  }
-}
-
-// Helper: Add elements to slide
-function addElements(slideData, targetSlide, pres) {
-  for (const el of slideData.elements) {
-    if (el.type === 'image') {
-      let imagePath = el.src.startsWith('file://') ? el.src.replace('file://', '') : el.src;
-      targetSlide.addImage({
-        path: imagePath,
-        x: el.position.x,
-        y: el.position.y,
-        w: el.position.w,
-        h: el.position.h
-      });
-    } else if (el.type === 'line') {
-      targetSlide.addShape(pres.ShapeType.line, {
-        x: el.x1,
-        y: el.y1,
-        w: el.x2 - el.x1,
-        h: el.y2 - el.y1,
-        line: { color: el.color, width: el.width }
-      });
-    } else if (el.type === 'shape') {
-      const shapeOptions = {
-        x: el.position.x,
-        y: el.position.y,
-        w: el.position.w,
-        h: el.position.h,
-        shape: el.shape.rectRadius > 0 ? pres.ShapeType.roundRect : pres.ShapeType.rect
-      };
-
-      if (el.shape.fill) {
-        shapeOptions.fill = { color: el.shape.fill };
-        if (el.shape.transparency != null) shapeOptions.fill.transparency = el.shape.transparency;
-      }
-      if (el.shape.line) shapeOptions.line = el.shape.line;
-      if (el.shape.rectRadius > 0) shapeOptions.rectRadius = el.shape.rectRadius;
-      if (el.shape.shadow) shapeOptions.shadow = el.shape.shadow;
-
-      targetSlide.addText(el.text || '', shapeOptions);
-    } else if (el.type === 'list') {
-      const listOptions = {
-        x: el.position.x,
-        y: el.position.y,
-        w: el.position.w,
-        h: el.position.h,
-        fontSize: el.style.fontSize,
-        fontFace: el.style.fontFace,
-        color: el.style.color,
-        align: el.style.align,
-        valign: 'top',
-        lineSpacing: el.style.lineSpacing,
-        paraSpaceBefore: el.style.paraSpaceBefore,
-        paraSpaceAfter: el.style.paraSpaceAfter,
-        margin: el.style.margin
-      };
-      if (el.style.margin) listOptions.margin = el.style.margin;
-      targetSlide.addText(el.items, listOptions);
-    } else {
-      // Check if text is single-line (height suggests one line)
-      const lineHeight = el.style.lineSpacing || el.style.fontSize * 1.2;
-      const isSingleLine = el.position.h <= lineHeight * 1.5;
-
-      let adjustedX = el.position.x;
-      let adjustedW = el.position.w;
-
-      // Make single-line text 2% wider to account for underestimate
-      if (isSingleLine) {
-        const widthIncrease = el.position.w * 0.02;
-        const align = el.style.align;
-
-        if (align === 'center') {
-          // Center: expand both sides
-          adjustedX = el.position.x - (widthIncrease / 2);
-          adjustedW = el.position.w + widthIncrease;
-        } else if (align === 'right') {
-          // Right: expand to the left
-          adjustedX = el.position.x - widthIncrease;
-          adjustedW = el.position.w + widthIncrease;
-        } else {
-          // Left (default): expand to the right
-          adjustedW = el.position.w + widthIncrease;
-        }
-      }
-
-      const textOptions = {
-        x: adjustedX,
-        y: el.position.y,
-        w: adjustedW,
-        h: el.position.h,
-        fontSize: el.style.fontSize,
-        fontFace: el.style.fontFace,
-        color: el.style.color,
-        bold: el.style.bold,
-        italic: el.style.italic,
-        underline: el.style.underline,
-        valign: 'top',
-        lineSpacing: el.style.lineSpacing,
-        paraSpaceBefore: el.style.paraSpaceBefore,
-        paraSpaceAfter: el.style.paraSpaceAfter,
-        inset: 0  // Remove default PowerPoint internal padding
-      };
-
-      if (el.style.align) textOptions.align = el.style.align;
-      if (el.style.margin) textOptions.margin = el.style.margin;
-      if (el.style.rotate !== undefined) textOptions.rotate = el.style.rotate;
-      if (el.style.transparency !== null && el.style.transparency !== undefined) textOptions.transparency = el.style.transparency;
-
-      targetSlide.addText(el.text, textOptions);
+  function computeGeometryPx(el, rotationDeg) {
+    const r = el.getBoundingClientRect();
+    if (rotationDeg === 90 || rotationDeg === 270) {
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const w = r.height;
+      const h = r.width;
+      return { x: cx - w / 2, y: cy - h / 2, w, h };
     }
+    if (rotationDeg !== 0) {
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      return { x: cx - w / 2, y: cy - h / 2, w, h };
+    }
+    return { x: r.left, y: r.top, w: r.width, h: r.height };
   }
-}
 
-// Helper: Extract slide data from HTML page
-async function extractSlideData(page) {
-  return await page.evaluate(() => {
-    const PT_PER_PX = 0.75;
-    const PX_PER_IN = 96;
+  // ---- 4.5.3 内联富文本通用解析 ----
+  function hasInlineFormatting(el) {
+    return !!el.querySelector('span,b,strong,i,em,u,br');
+  }
 
-    // Fonts that are single-weight and should not have bold applied
-    // (applying bold causes PowerPoint to use faux bold which makes text wider)
-    const SINGLE_WEIGHT_FONTS = ['impact'];
+  function buildRuns(containerEl, marginErrsOut) {
+    const rawRuns = [];
 
-    // Helper: Check if a font should skip bold formatting
-    const shouldSkipBold = (fontFamily) => {
-      if (!fontFamily) return false;
-      const normalizedFont = fontFamily.toLowerCase().replace(/['"]/g, '').split(',')[0].trim();
-      return SINGLE_WEIGHT_FONTS.includes(normalizedFont);
-    };
+    function styleOf(el) {
+      const cs = getComputedStyle(el);
+      const fontSizePt = parseFloat(cs.fontSize) * PT_PER_PX;
+      const fontFace = firstFontFamily(cs.fontFamily);
+      let bold = cs.fontWeight === 'bold' || parseInt(cs.fontWeight, 10) >= 600;
+      if (isSingleWeightFont(fontFace)) bold = false;
+      const italic = cs.fontStyle === 'italic';
+      const deco = cs.textDecorationLine || cs.textDecoration || '';
+      const underline = deco.indexOf('underline') !== -1;
+      const colorParsed = parseColorString(cs.color);
+      const textTransform = cs.textTransform;
+      return { fontSizePt, bold, italic, underline, colorParsed, textTransform };
+    }
 
-    // Unit conversion helpers
-    const pxToInch = (px) => px / PX_PER_IN;
-    const pxToPoints = (pxStr) => parseFloat(pxStr) * PT_PER_PX;
-    const rgbToHex = (rgbStr) => {
-      // Handle transparent backgrounds by defaulting to white
-      if (rgbStr === 'rgba(0, 0, 0, 0)' || rgbStr === 'transparent') return 'FFFFFF';
-
-      const match = rgbStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-      if (!match) return 'FFFFFF';
-      return match.slice(1).map(n => parseInt(n).toString(16).padStart(2, '0')).join('');
-    };
-
-    const extractAlpha = (rgbStr) => {
-      const match = rgbStr.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
-      if (!match || !match[4]) return null;
-      const alpha = parseFloat(match[4]);
-      return Math.round((1 - alpha) * 100);
-    };
-
-    const applyTextTransform = (text, textTransform) => {
-      if (textTransform === 'uppercase') return text.toUpperCase();
-      if (textTransform === 'lowercase') return text.toLowerCase();
-      if (textTransform === 'capitalize') {
-        return text.replace(/\b\w/g, c => c.toUpperCase());
-      }
-      return text;
-    };
-
-    // Extract rotation angle from CSS transform and writing-mode
-    const getRotation = (transform, writingMode) => {
-      let angle = 0;
-
-      // Handle writing-mode first
-      // PowerPoint: 90° = text rotated 90° clockwise (reads top to bottom, letters upright)
-      // PowerPoint: 270° = text rotated 270° clockwise (reads bottom to top, letters upright)
-      if (writingMode === 'vertical-rl') {
-        // vertical-rl alone = text reads top to bottom = 90° in PowerPoint
-        angle = 90;
-      } else if (writingMode === 'vertical-lr') {
-        // vertical-lr alone = text reads bottom to top = 270° in PowerPoint
-        angle = 270;
-      }
-
-      // Then add any transform rotation
-      if (transform && transform !== 'none') {
-        // Try to match rotate() function
-        const rotateMatch = transform.match(/rotate\((-?\d+(?:\.\d+)?)deg\)/);
-        if (rotateMatch) {
-          angle += parseFloat(rotateMatch[1]);
-        } else {
-          // Browser may compute as matrix - extract rotation from matrix
-          const matrixMatch = transform.match(/matrix\(([^)]+)\)/);
-          if (matrixMatch) {
-            const values = matrixMatch[1].split(',').map(parseFloat);
-            // matrix(a, b, c, d, e, f) where rotation = atan2(b, a)
-            const matrixAngle = Math.atan2(values[1], values[0]) * (180 / Math.PI);
-            angle += Math.round(matrixAngle);
-          }
-        }
-      }
-
-      // Normalize to 0-359 range
-      angle = angle % 360;
-      if (angle < 0) angle += 360;
-
-      return angle === 0 ? null : angle;
-    };
-
-    // Get position/dimensions accounting for rotation
-    const getPositionAndSize = (el, rect, rotation) => {
-      if (rotation === null) {
-        return { x: rect.left, y: rect.top, w: rect.width, h: rect.height };
-      }
-
-      // For 90° or 270° rotations, swap width and height
-      // because PowerPoint applies rotation to the original (unrotated) box
-      const isVertical = rotation === 90 || rotation === 270;
-
-      if (isVertical) {
-        // The browser shows us the rotated dimensions (tall box for vertical text)
-        // But PowerPoint needs the pre-rotation dimensions (wide box that will be rotated)
-        // So we swap: browser's height becomes PPT's width, browser's width becomes PPT's height
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-
-        return {
-          x: centerX - rect.height / 2,
-          y: centerY - rect.width / 2,
-          w: rect.height,
-          h: rect.width
-        };
-      }
-
-      // For other rotations, use element's offset dimensions
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      return {
-        x: centerX - el.offsetWidth / 2,
-        y: centerY - el.offsetHeight / 2,
-        w: el.offsetWidth,
-        h: el.offsetHeight
-      };
-    };
-
-    // Parse CSS box-shadow into PptxGenJS shadow properties
-    const parseBoxShadow = (boxShadow) => {
-      if (!boxShadow || boxShadow === 'none') return null;
-
-      // Browser computed style format: "rgba(0, 0, 0, 0.3) 2px 2px 8px 0px [inset]"
-      // CSS format: "[inset] 2px 2px 8px 0px rgba(0, 0, 0, 0.3)"
-
-      const insetMatch = boxShadow.match(/inset/);
-
-      // IMPORTANT: PptxGenJS/PowerPoint doesn't properly support inset shadows
-      // Only process outer shadows to avoid file corruption
-      if (insetMatch) return null;
-
-      // Extract color first (rgba or rgb at start)
-      const colorMatch = boxShadow.match(/rgba?\([^)]+\)/);
-
-      // Extract numeric values (handles both px and pt units)
-      const parts = boxShadow.match(/([-\d.]+)(px|pt)/g);
-
-      if (!parts || parts.length < 2) return null;
-
-      const offsetX = parseFloat(parts[0]);
-      const offsetY = parseFloat(parts[1]);
-      const blur = parts.length > 2 ? parseFloat(parts[2]) : 0;
-
-      // Calculate angle from offsets (in degrees, 0 = right, 90 = down)
-      let angle = 0;
-      if (offsetX !== 0 || offsetY !== 0) {
-        angle = Math.atan2(offsetY, offsetX) * (180 / Math.PI);
-        if (angle < 0) angle += 360;
-      }
-
-      // Calculate offset distance (hypotenuse)
-      const offset = Math.sqrt(offsetX * offsetX + offsetY * offsetY) * PT_PER_PX;
-
-      // Extract opacity from rgba
-      let opacity = 0.5;
-      if (colorMatch) {
-        const opacityMatch = colorMatch[0].match(/[\d.]+\)$/);
-        if (opacityMatch) {
-          opacity = parseFloat(opacityMatch[0].replace(')', ''));
-        }
-      }
-
-      return {
-        type: 'outer',
-        angle: Math.round(angle),
-        blur: blur * 0.75, // Convert to points
-        color: colorMatch ? rgbToHex(colorMatch[0]) : '000000',
-        offset: offset,
-        opacity
-      };
-    };
-
-    // Parse inline formatting tags (<b>, <i>, <u>, <strong>, <em>, <span>) into text runs
-    const parseInlineFormatting = (element, baseOptions = {}, runs = [], baseTextTransform = (x) => x) => {
-      let prevNodeIsText = false;
-
-      element.childNodes.forEach((node) => {
-        let textTransform = baseTextTransform;
-
-        const isText = node.nodeType === Node.TEXT_NODE || node.tagName === 'BR';
-        if (isText) {
-          const text = node.tagName === 'BR' ? '\n' : textTransform(node.textContent.replace(/\s+/g, ' '));
-          const prevRun = runs[runs.length - 1];
-          if (prevNodeIsText && prevRun) {
-            prevRun.text += text;
-          } else {
-            runs.push({ text, options: { ...baseOptions } });
-          }
-
-        } else if (node.nodeType === Node.ELEMENT_NODE && node.textContent.trim()) {
-          const options = { ...baseOptions };
-          const computed = window.getComputedStyle(node);
-
-          // Handle inline elements with computed styles
-          if (node.tagName === 'SPAN' || node.tagName === 'B' || node.tagName === 'STRONG' || node.tagName === 'I' || node.tagName === 'EM' || node.tagName === 'U') {
-            const isBold = computed.fontWeight === 'bold' || parseInt(computed.fontWeight) >= 600;
-            if (isBold && !shouldSkipBold(computed.fontFamily)) options.bold = true;
-            if (computed.fontStyle === 'italic') options.italic = true;
-            if (computed.textDecoration && computed.textDecoration.includes('underline')) options.underline = true;
-            if (computed.color && computed.color !== 'rgb(0, 0, 0)') {
-              options.color = rgbToHex(computed.color);
-              const transparency = extractAlpha(computed.color);
-              if (transparency !== null) options.transparency = transparency;
-            }
-            if (computed.fontSize) options.fontSize = pxToPoints(computed.fontSize);
-
-            // Apply text-transform on the span element itself
-            if (computed.textTransform && computed.textTransform !== 'none') {
-              const transformStr = computed.textTransform;
-              textTransform = (text) => applyTextTransform(text, transformStr);
-            }
-
-            // Validate: Check for margins on inline elements
-            if (computed.marginLeft && parseFloat(computed.marginLeft) > 0) {
-              errors.push(`Inline element <${node.tagName.toLowerCase()}> has margin-left which is not supported in PowerPoint. Remove margin from inline elements.`);
-            }
-            if (computed.marginRight && parseFloat(computed.marginRight) > 0) {
-              errors.push(`Inline element <${node.tagName.toLowerCase()}> has margin-right which is not supported in PowerPoint. Remove margin from inline elements.`);
-            }
-            if (computed.marginTop && parseFloat(computed.marginTop) > 0) {
-              errors.push(`Inline element <${node.tagName.toLowerCase()}> has margin-top which is not supported in PowerPoint. Remove margin from inline elements.`);
-            }
-            if (computed.marginBottom && parseFloat(computed.marginBottom) > 0) {
-              errors.push(`Inline element <${node.tagName.toLowerCase()}> has margin-bottom which is not supported in PowerPoint. Remove margin from inline elements.`);
-            }
-
-            // Recursively process the child node. This will flatten nested spans into multiple runs.
-            parseInlineFormatting(node, options, runs, textTransform);
-          }
-        }
-
-        prevNodeIsText = isText;
-      });
-
-      // Trim leading space from first run and trailing space from last run
-      if (runs.length > 0) {
-        runs[0].text = runs[0].text.replace(/^\s+/, '');
-        runs[runs.length - 1].text = runs[runs.length - 1].text.replace(/\s+$/, '');
-      }
-
-      return runs.filter(r => r.text.length > 0);
-    };
-
-    // Extract background from body (image or color)
-    const body = document.body;
-    const bodyStyle = window.getComputedStyle(body);
-    const bgImage = bodyStyle.backgroundImage;
-    const bgColor = bodyStyle.backgroundColor;
-
-    // Collect validation errors
-    const errors = [];
-
-    // Validate: Check for CSS gradients
-    if (bgImage && (bgImage.includes('linear-gradient') || bgImage.includes('radial-gradient'))) {
-      errors.push(
-        'CSS gradients are not supported. Use Sharp to rasterize gradients as PNG images first, ' +
-        'then reference with background-image: url(\'gradient.png\')'
+    function sameStyle(a, b) {
+      if (!a || !b) return false;
+      return (
+        a.fontSizePt === b.fontSizePt &&
+        a.bold === b.bold &&
+        a.italic === b.italic &&
+        a.underline === b.underline &&
+        a.textTransform === b.textTransform &&
+        JSON.stringify(a.colorParsed) === JSON.stringify(b.colorParsed)
       );
     }
 
-    let background;
-    if (bgImage && bgImage !== 'none') {
-      // Extract URL from url("...") or url(...)
-      const urlMatch = bgImage.match(/url\(["']?([^"')]+)["']?\)/);
-      if (urlMatch) {
-        background = {
-          type: 'image',
-          path: urlMatch[1]
-        };
+    function append(text, style) {
+      if (text === '') return;
+      const last = rawRuns[rawRuns.length - 1];
+      if (last && sameStyle(last.style, style)) {
+        last.text += text;
       } else {
-        background = {
-          type: 'color',
-          value: rgbToHex(bgColor)
+        rawRuns.push({ text, style });
+      }
+    }
+
+    function checkInlineMargins(el, tag) {
+      const cs = getComputedStyle(el);
+      ['Left', 'Right', 'Top', 'Bottom'].forEach((dir) => {
+        const v = parsePx(cs['margin' + dir]);
+        if (v !== 0) {
+          marginErrsOut.push(
+            `Inline element <${tag.toLowerCase()}> has a non-zero margin-${dir.toLowerCase()} (inline elements do not support margin — remove it).`
+          );
+        }
+      });
+    }
+
+    function walk(node) {
+      if (node.nodeType === 3) {
+        const collapsed = collapseWs(node.textContent);
+        if (collapsed === '') return;
+        const style = styleOf(node.parentElement);
+        append(applyTextTransform(collapsed, style.textTransform), style);
+        return;
+      }
+      if (node.nodeType !== 1) return;
+      const tag = node.tagName;
+      if (tag === 'BR') {
+        const style = styleOf(node.parentElement);
+        append('\n', style);
+        return;
+      }
+      if (INLINE_TAGS.has(tag)) {
+        const text = node.textContent;
+        if (!text || !text.trim()) return;
+        checkInlineMargins(node, tag);
+        Array.from(node.childNodes).forEach(walk);
+        return;
+      }
+      // 不认识的标签（比如 <code>）：整段忽略，文字从输出里消失（既有行为，不扩展）。
+    }
+
+    Array.from(containerEl.childNodes).forEach(walk);
+
+    if (rawRuns.length > 0) {
+      rawRuns[0].text = rawRuns[0].text.replace(/^ +/, '');
+      rawRuns[rawRuns.length - 1].text = rawRuns[rawRuns.length - 1].text.replace(/ +$/, '');
+    }
+
+    // pptxgenjs 的 TextProps 要求 { text, options }：options 里只放和继承样式不同的
+    // 覆盖项，缺省项交给 pptxgenjs 自己按顶层/上一个 run 的默认值处理。
+    return rawRuns
+      .filter((r) => r.text !== '')
+      .map((r) => {
+        const options = { fontSize: r.style.fontSizePt };
+        if (r.style.bold) options.bold = true;
+        if (r.style.italic) options.italic = true;
+        if (r.style.underline) options.underline = true;
+        const c = r.style.colorParsed;
+        const isPureBlack = c && c.hex === '000000' && !c.hasAlpha;
+        if (c && !isPureBlack) {
+          options.color = c.hex;
+          if (c.hasAlpha) options.transparency = Math.round((1 - c.alpha) * 100);
+        }
+        return { text: r.text, options };
+      });
+  }
+
+  function stripLeadingManualBullet(run) {
+    for (const ch of MANUAL_BULLET_CHARS_STRIP) {
+      if (run.text.indexOf(ch) === 0) {
+        run.text = run.text.slice(1).replace(/^\s+/, '');
+        return;
+      }
+    }
+  }
+
+  // ---- 4.2 占位符 ----
+  function processPlaceholder(el) {
+    consumed.add(el);
+    Array.from(el.querySelectorAll('*')).forEach((d) => consumed.add(d));
+    const rect = rectOf(el);
+    if (rect.w === 0 || rect.h === 0) {
+      const dim = rect.w === 0 ? 'width' : 'height';
+      const id = el.id || 'unnamed';
+      errors.push(`占位区 #${id} 渲染出来的${dim === 'width' ? '宽度' : '高度'}是 0，检查它的 CSS 布局`);
+      return;
+    }
+    const id = el.id || 'placeholder-' + placeholders.length;
+    placeholders.push({ id, x: toIn(rect.x), y: toIn(rect.y), w: toIn(rect.w), h: toIn(rect.h) });
+  }
+
+  // ---- 4.3 图片 ----
+  function processImage(el) {
+    const rect = rectOf(el);
+    if (rect.w === 0 || rect.h === 0) return;
+    elements.push({ type: 'image', src: el.src, x: toIn(rect.x), y: toIn(rect.y), w: toIn(rect.w), h: toIn(rect.h) });
+  }
+
+  // ---- 4.4 div ----
+  function buildBorderLines(rect, b) {
+    const out = [];
+    const sides = [
+      { info: b.top, geo: () => ({ x: rect.x, y: rect.y + b.top.w / 2, w: rect.w, h: 0 }) },
+      { info: b.right, geo: () => ({ x: rect.x + rect.w - b.right.w / 2, y: rect.y, w: 0, h: rect.h }) },
+      { info: b.bottom, geo: () => ({ x: rect.x, y: rect.y + rect.h - b.bottom.w / 2, w: rect.w, h: 0 }) },
+      { info: b.left, geo: () => ({ x: rect.x + b.left.w / 2, y: rect.y, w: 0, h: rect.h }) },
+    ];
+    sides.forEach((s) => {
+      if (s.info.w > 0) {
+        const g = s.geo();
+        const c = parseColorString(s.info.c);
+        out.push({
+          type: 'line',
+          x: toIn(g.x),
+          y: toIn(g.y),
+          w: toIn(g.w),
+          h: toIn(g.h),
+          color: c ? c.hex : '000000',
+          widthPt: toPt(s.info.w),
+        });
+      }
+    });
+    return out;
+  }
+
+  function processDiv(div) {
+    // 1: 裸文字校验（永远执行，不因为后面的 background-image 违规而跳过）
+    const rawDirectText = Array.from(div.childNodes)
+      .filter((n) => n.nodeType === 3)
+      .map((n) => n.textContent)
+      .join('')
+      .trim();
+    if (rawDirectText) {
+      errors.push(
+        `<div> 里直接写了文字「${truncate(rawDirectText, 50)}」，PPT 里不会出现——请用 <p>、<h1>-<h6>、<ul>/<ol> 包起来`
+      );
+    }
+
+    // 2: background-image 校验（命中时不产出 shape/line，但不消费该节点，子孙继续遍历）
+    const cs = getComputedStyle(div);
+    if (cs.backgroundImage && cs.backgroundImage !== 'none') {
+      if (/gradient/i.test(cs.backgroundImage)) {
+        errors.push(
+          '<div> 背景不能用 CSS 渐变：换成纯色 background-color，或把渐变先导出成 PNG 再用 <img> / slide.addImage() 放上去'
+        );
+      } else {
+        errors.push(
+          '<div> 不能用 background-image：图片请改成 <img> 标签，或用 slide.addImage() 单独叠一层'
+        );
+      }
+      return;
+    }
+
+    const rect = rectOf(div);
+    if (rect.w === 0 || rect.h === 0) return;
+
+    const bgColor = parseColorString(cs.backgroundColor);
+    const hasBg = isVisibleColor(bgColor);
+    const b = getBordersInfo(cs);
+    const hasBorder = b.top.w > 0 || b.right.w > 0 || b.bottom.w > 0 || b.left.w > 0;
+    const hasUniformBorder = hasBorder && b.top.w === b.right.w && b.right.w === b.bottom.w && b.bottom.w === b.left.w;
+
+    let shapeEl = null;
+    let lineEls = [];
+
+    if (hasBorder && !hasUniformBorder) {
+      lineEls = buildBorderLines(rect, b);
+    }
+
+    if (hasBg || hasBorder) {
+      if (hasBg || hasUniformBorder) {
+        const shadow = parseBoxShadow(cs.boxShadow);
+        shapeEl = {
+          type: 'shape',
+          x: toIn(rect.x),
+          y: toIn(rect.y),
+          w: toIn(rect.w),
+          h: toIn(rect.h),
+          fill: hasBg ? fillFieldOf(bgColor) : null,
+          line: hasUniformBorder ? { color: parseColorString(b.top.c).hex, width: toPt(b.top.w) } : null,
+          rectRadius: computeRectRadius(cs, rect.w, rect.h),
+          shadow,
         };
       }
-    } else {
-      background = {
-        type: 'color',
-        value: rgbToHex(bgColor)
+      consumed.add(div);
+    }
+
+    if (shapeEl) elements.push(shapeEl);
+    lineEls.forEach((l) => elements.push(l));
+  }
+
+  // ---- 4.1 data-pptx-merge 容器 ----
+  function processMergeContainer(container) {
+    const rect = rectOf(container);
+    if (rect.w === 0 || rect.h === 0) {
+      consumed.add(container);
+      return;
+    }
+
+    const nested = container.querySelectorAll('[data-pptx-merge="true"]');
+    if (nested.length > 0) {
+      errors.push('data-pptx-merge containers cannot be nested. Remove the inner data-pptx-merge="true" attribute.');
+      consumed.add(container);
+      return;
+    }
+
+    const cs = getComputedStyle(container);
+    if (cs.backgroundImage && cs.backgroundImage !== 'none') {
+      if (/gradient/i.test(cs.backgroundImage)) {
+        errors.push(
+          'CSS gradients are not supported on data-pptx-merge containers. Use a solid background-color, or overlay the gradient with slide.addImage().'
+        );
+      } else {
+        errors.push(
+          'data-pptx-merge containers do not support background-image. Use a solid background-color/border, or overlay the picture with slide.addImage().'
+        );
+      }
+      consumed.add(container);
+      return;
+    }
+
+    const paragraphs = Array.from(container.querySelectorAll('p,h1,h2,h3,h4,h5,h6'));
+    if (paragraphs.length === 0) {
+      errors.push(
+        'data-pptx-merge container has no mergeable text elements. Remove data-pptx-merge or add <p>/<h1>-<h6> text inside it.'
+      );
+      consumed.add(container);
+      return;
+    }
+
+    const bgColor = parseColorString(cs.backgroundColor);
+    const hasBg = isVisibleColor(bgColor);
+    const b = getBordersInfo(cs);
+    const hasUniformBorder = b.top.w > 0 && b.top.w === b.right.w && b.right.w === b.bottom.w && b.bottom.w === b.left.w;
+
+    let shapeEl = null;
+    if (hasBg || hasUniformBorder) {
+      const shadow = parseBoxShadow(cs.boxShadow);
+      shapeEl = {
+        type: 'shape',
+        x: toIn(rect.x),
+        y: toIn(rect.y),
+        w: toIn(rect.w),
+        h: toIn(rect.h),
+        fill: hasBg ? fillFieldOf(bgColor) : null,
+        line: hasUniformBorder ? { color: parseColorString(b.top.c).hex, width: toPt(b.top.w) } : null,
+        rectRadius: computeRectRadius(cs, rect.w, rect.h),
+        shadow,
       };
     }
 
-    // Process all elements
-    const elements = [];
-    const placeholders = [];
-    const textTags = ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'UL', 'OL', 'LI'];
-    const processed = new Set();
+    // 框级基准样式取第一个文字后代
+    const baseEl = paragraphs[0];
+    const baseCs = getComputedStyle(baseEl);
+    const baseFontSizePt = parseFloat(baseCs.fontSize) * PT_PER_PX;
+    const baseFontFace = firstFontFamily(baseCs.fontFamily);
+    const baseColorParsed = parseColorString(baseCs.color);
+    const baseAlign = normalizeAlign(baseCs.textAlign);
+    const baseLineSpacingPt = parseLineHeightPt(baseCs.lineHeight, baseFontSizePt);
 
-    document.querySelectorAll('*').forEach((el) => {
-      if (processed.has(el)) return;
+    const marginArr = [
+      toPt(parsePx(cs.paddingLeft)),
+      toPt(parsePx(cs.paddingRight)),
+      toPt(parsePx(cs.paddingBottom)),
+      toPt(parsePx(cs.paddingTop)),
+    ];
 
-      // Validate text elements don't have backgrounds, borders, or shadows
-      if (textTags.includes(el.tagName)) {
-        const computed = window.getComputedStyle(el);
-        const hasBg = computed.backgroundColor && computed.backgroundColor !== 'rgba(0, 0, 0, 0)';
-        const hasBorder = (computed.borderWidth && parseFloat(computed.borderWidth) > 0) ||
-                          (computed.borderTopWidth && parseFloat(computed.borderTopWidth) > 0) ||
-                          (computed.borderRightWidth && parseFloat(computed.borderRightWidth) > 0) ||
-                          (computed.borderBottomWidth && parseFloat(computed.borderBottomWidth) > 0) ||
-                          (computed.borderLeftWidth && parseFloat(computed.borderLeftWidth) > 0);
-        const hasShadow = computed.boxShadow && computed.boxShadow !== 'none';
+    paragraphs.forEach((p) => consumed.add(p));
+    consumed.add(container);
 
-        if (hasBg || hasBorder || hasShadow) {
-          errors.push(
-            `Text element <${el.tagName.toLowerCase()}> has ${hasBg ? 'background' : hasBorder ? 'border' : 'shadow'}. ` +
-            'Backgrounds, borders, and shadows are only supported on <div> elements, not text elements.'
-          );
-          return;
-        }
+    const allRuns = [];
+    paragraphs.forEach((p, idx) => {
+      const marginErrs = [];
+      const runs = buildRuns(p, marginErrs);
+      errors.push(...marginErrs);
+      if (runs.length === 0) return;
+      if (idx < paragraphs.length - 1) {
+        runs[runs.length - 1].options.breakLine = true;
       }
-
-      // Extract placeholder elements (for charts, etc.)
-      if (el.className && el.className.includes('placeholder')) {
-        const rect = el.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) {
-          errors.push(
-            `Placeholder "${el.id || 'unnamed'}" has ${rect.width === 0 ? 'width: 0' : 'height: 0'}. Check the layout CSS.`
-          );
-        } else {
-          placeholders.push({
-            id: el.id || `placeholder-${placeholders.length}`,
-            x: pxToInch(rect.left),
-            y: pxToInch(rect.top),
-            w: pxToInch(rect.width),
-            h: pxToInch(rect.height)
-          });
-        }
-        processed.add(el);
-        return;
-      }
-
-      // Extract images
-      if (el.tagName === 'IMG') {
-        const rect = el.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          elements.push({
-            type: 'image',
-            src: el.src,
-            position: {
-              x: pxToInch(rect.left),
-              y: pxToInch(rect.top),
-              w: pxToInch(rect.width),
-              h: pxToInch(rect.height)
-            }
-          });
-          processed.add(el);
-          return;
-        }
-      }
-
-      // Extract DIVs with backgrounds/borders as shapes
-      const isContainer = el.tagName === 'DIV' && !textTags.includes(el.tagName);
-      if (isContainer) {
-        const computed = window.getComputedStyle(el);
-        const hasBg = computed.backgroundColor && computed.backgroundColor !== 'rgba(0, 0, 0, 0)';
-
-        // Validate: Check for unwrapped text content in DIV
-        for (const node of el.childNodes) {
-          if (node.nodeType === Node.TEXT_NODE) {
-            const text = node.textContent.trim();
-            if (text) {
-              errors.push(
-                `DIV element contains unwrapped text "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}". ` +
-                'All text must be wrapped in <p>, <h1>-<h6>, <ul>, or <ol> tags to appear in PowerPoint.'
-              );
-            }
-          }
-        }
-
-        // Check for background images on shapes
-        const bgImage = computed.backgroundImage;
-        if (bgImage && bgImage !== 'none') {
-          errors.push(
-            'Background images on DIV elements are not supported. ' +
-            'Use solid colors or borders for shapes, or use slide.addImage() in PptxGenJS to layer images.'
-          );
-          return;
-        }
-
-        // Check for borders - both uniform and partial
-        const borderTop = computed.borderTopWidth;
-        const borderRight = computed.borderRightWidth;
-        const borderBottom = computed.borderBottomWidth;
-        const borderLeft = computed.borderLeftWidth;
-        const borders = [borderTop, borderRight, borderBottom, borderLeft].map(b => parseFloat(b) || 0);
-        const hasBorder = borders.some(b => b > 0);
-        const hasUniformBorder = hasBorder && borders.every(b => b === borders[0]);
-        const borderLines = [];
-
-        if (hasBorder && !hasUniformBorder) {
-          const rect = el.getBoundingClientRect();
-          const x = pxToInch(rect.left);
-          const y = pxToInch(rect.top);
-          const w = pxToInch(rect.width);
-          const h = pxToInch(rect.height);
-
-          // Collect lines to add after shape (inset by half the line width to center on edge)
-          if (parseFloat(borderTop) > 0) {
-            const widthPt = pxToPoints(borderTop);
-            const inset = (widthPt / 72) / 2; // Convert points to inches, then half
-            borderLines.push({
-              type: 'line',
-              x1: x, y1: y + inset, x2: x + w, y2: y + inset,
-              width: widthPt,
-              color: rgbToHex(computed.borderTopColor)
-            });
-          }
-          if (parseFloat(borderRight) > 0) {
-            const widthPt = pxToPoints(borderRight);
-            const inset = (widthPt / 72) / 2;
-            borderLines.push({
-              type: 'line',
-              x1: x + w - inset, y1: y, x2: x + w - inset, y2: y + h,
-              width: widthPt,
-              color: rgbToHex(computed.borderRightColor)
-            });
-          }
-          if (parseFloat(borderBottom) > 0) {
-            const widthPt = pxToPoints(borderBottom);
-            const inset = (widthPt / 72) / 2;
-            borderLines.push({
-              type: 'line',
-              x1: x, y1: y + h - inset, x2: x + w, y2: y + h - inset,
-              width: widthPt,
-              color: rgbToHex(computed.borderBottomColor)
-            });
-          }
-          if (parseFloat(borderLeft) > 0) {
-            const widthPt = pxToPoints(borderLeft);
-            const inset = (widthPt / 72) / 2;
-            borderLines.push({
-              type: 'line',
-              x1: x + inset, y1: y, x2: x + inset, y2: y + h,
-              width: widthPt,
-              color: rgbToHex(computed.borderLeftColor)
-            });
-          }
-        }
-
-        if (hasBg || hasBorder) {
-          const rect = el.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0) {
-            const shadow = parseBoxShadow(computed.boxShadow);
-
-            // Only add shape if there's background or uniform border
-            if (hasBg || hasUniformBorder) {
-              elements.push({
-                type: 'shape',
-                text: '',  // Shape only - child text elements render on top
-                position: {
-                  x: pxToInch(rect.left),
-                  y: pxToInch(rect.top),
-                  w: pxToInch(rect.width),
-                  h: pxToInch(rect.height)
-                },
-                shape: {
-                  fill: hasBg ? rgbToHex(computed.backgroundColor) : null,
-                  transparency: hasBg ? extractAlpha(computed.backgroundColor) : null,
-                  line: hasUniformBorder ? {
-                    color: rgbToHex(computed.borderColor),
-                    width: pxToPoints(computed.borderWidth)
-                  } : null,
-                  // Convert border-radius to rectRadius (in inches)
-                  // % values: 50%+ = circle (1), <50% = percentage of min dimension
-                  // pt values: divide by 72 (72pt = 1 inch)
-                  // px values: divide by 96 (96px = 1 inch)
-                  rectRadius: (() => {
-                    const radius = computed.borderRadius;
-                    const radiusValue = parseFloat(radius);
-                    if (radiusValue === 0) return 0;
-
-                    if (radius.includes('%')) {
-                      if (radiusValue >= 50) return 1;
-                      // Calculate percentage of smaller dimension
-                      const minDim = Math.min(rect.width, rect.height);
-                      return (radiusValue / 100) * pxToInch(minDim);
-                    }
-
-                    if (radius.includes('pt')) return radiusValue / 72;
-                    return radiusValue / PX_PER_IN;
-                  })(),
-                  shadow: shadow
-                }
-              });
-            }
-
-            // Add partial border lines
-            elements.push(...borderLines);
-
-            processed.add(el);
-            return;
-          }
-        }
-      }
-
-      // Extract bullet lists as single text block
-      if (el.tagName === 'UL' || el.tagName === 'OL') {
-        const rect = el.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) return;
-
-        const liElements = Array.from(el.querySelectorAll('li'));
-        const items = [];
-        const ulComputed = window.getComputedStyle(el);
-        const ulPaddingLeftPt = pxToPoints(ulComputed.paddingLeft);
-
-        // Split: margin-left for bullet position, indent for text position
-        // margin-left + indent = ul padding-left
-        const marginLeft = ulPaddingLeftPt * 0.5;
-        const textIndent = ulPaddingLeftPt * 0.5;
-
-        liElements.forEach((li, idx) => {
-          const isLast = idx === liElements.length - 1;
-          const runs = parseInlineFormatting(li, { breakLine: false });
-          // Clean manual bullets from first run
-          if (runs.length > 0) {
-            runs[0].text = runs[0].text.replace(/^[•\-\*▪▸]\s*/, '');
-            runs[0].options.bullet = { indent: textIndent };
-          }
-          // Set breakLine on last run
-          if (runs.length > 0 && !isLast) {
-            runs[runs.length - 1].options.breakLine = true;
-          }
-          items.push(...runs);
-        });
-
-        const computed = window.getComputedStyle(liElements[0] || el);
-
-        elements.push({
-          type: 'list',
-          items: items,
-          position: {
-            x: pxToInch(rect.left),
-            y: pxToInch(rect.top),
-            w: pxToInch(rect.width),
-            h: pxToInch(rect.height)
-          },
-          style: {
-            fontSize: pxToPoints(computed.fontSize),
-            fontFace: computed.fontFamily.split(',')[0].replace(/['"]/g, '').trim(),
-            color: rgbToHex(computed.color),
-            transparency: extractAlpha(computed.color),
-            align: computed.textAlign === 'start' ? 'left' : computed.textAlign,
-            lineSpacing: computed.lineHeight && computed.lineHeight !== 'normal' ? pxToPoints(computed.lineHeight) : null,
-            paraSpaceBefore: 0,
-            paraSpaceAfter: pxToPoints(computed.marginBottom),
-            // PptxGenJS margin array is [left, right, bottom, top]
-            margin: [marginLeft, 0, 0, 0]
-          }
-        });
-
-        liElements.forEach(li => processed.add(li));
-        processed.add(el);
-        return;
-      }
-
-      // Extract text elements (P, H1, H2, etc.)
-      if (!textTags.includes(el.tagName)) return;
-
-      const rect = el.getBoundingClientRect();
-      const text = el.textContent.trim();
-      if (rect.width === 0 || rect.height === 0 || !text) return;
-
-      // Validate: Check for manual bullet symbols in text elements (not in lists)
-      if (el.tagName !== 'LI' && /^[•\-\*▪▸○●◆◇■□]\s/.test(text.trimStart())) {
-        errors.push(
-          `Text element <${el.tagName.toLowerCase()}> starts with bullet symbol "${text.substring(0, 20)}...". ` +
-          'Use <ul> or <ol> lists instead of manual bullet symbols.'
-        );
-        return;
-      }
-
-      const computed = window.getComputedStyle(el);
-      const rotation = getRotation(computed.transform, computed.writingMode);
-      const { x, y, w, h } = getPositionAndSize(el, rect, rotation);
-
-      const baseStyle = {
-        fontSize: pxToPoints(computed.fontSize),
-        fontFace: computed.fontFamily.split(',')[0].replace(/['"]/g, '').trim(),
-        color: rgbToHex(computed.color),
-        align: computed.textAlign === 'start' ? 'left' : computed.textAlign,
-        lineSpacing: pxToPoints(computed.lineHeight),
-        paraSpaceBefore: pxToPoints(computed.marginTop),
-        paraSpaceAfter: pxToPoints(computed.marginBottom),
-        // PptxGenJS margin array is [left, right, bottom, top] (not [top, right, bottom, left] as documented)
-        margin: [
-          pxToPoints(computed.paddingLeft),
-          pxToPoints(computed.paddingRight),
-          pxToPoints(computed.paddingBottom),
-          pxToPoints(computed.paddingTop)
-        ]
-      };
-
-      const transparency = extractAlpha(computed.color);
-      if (transparency !== null) baseStyle.transparency = transparency;
-
-      if (rotation !== null) baseStyle.rotate = rotation;
-
-      const hasFormatting = el.querySelector('b, i, u, strong, em, span, br');
-
-      if (hasFormatting) {
-        // Text with inline formatting
-        const transformStr = computed.textTransform;
-        const runs = parseInlineFormatting(el, {}, [], (str) => applyTextTransform(str, transformStr));
-
-        // Adjust lineSpacing based on largest fontSize in runs
-        const adjustedStyle = { ...baseStyle };
-        if (adjustedStyle.lineSpacing) {
-          const maxFontSize = Math.max(
-            adjustedStyle.fontSize,
-            ...runs.map(r => r.options?.fontSize || 0)
-          );
-          if (maxFontSize > adjustedStyle.fontSize) {
-            const lineHeightMultiplier = adjustedStyle.lineSpacing / adjustedStyle.fontSize;
-            adjustedStyle.lineSpacing = maxFontSize * lineHeightMultiplier;
-          }
-        }
-
-        elements.push({
-          type: el.tagName.toLowerCase(),
-          text: runs,
-          position: { x: pxToInch(x), y: pxToInch(y), w: pxToInch(w), h: pxToInch(h) },
-          style: adjustedStyle
-        });
-      } else {
-        // Plain text - inherit CSS formatting
-        const textTransform = computed.textTransform;
-        const transformedText = applyTextTransform(text, textTransform);
-
-        const isBold = computed.fontWeight === 'bold' || parseInt(computed.fontWeight) >= 600;
-
-        elements.push({
-          type: el.tagName.toLowerCase(),
-          text: transformedText,
-          position: { x: pxToInch(x), y: pxToInch(y), w: pxToInch(w), h: pxToInch(h) },
-          style: {
-            ...baseStyle,
-            bold: isBold && !shouldSkipBold(computed.fontFamily),
-            italic: computed.fontStyle === 'italic',
-            underline: computed.textDecoration.includes('underline')
-          }
-        });
-      }
-
-      processed.add(el);
+      allRuns.push(...runs);
     });
 
-    return { background, elements, placeholders, errors };
-  });
+    if (allRuns.length === 0) return;
+
+    if (shapeEl) elements.push(shapeEl);
+    elements.push({
+      type: 'merged-text',
+      x: toIn(rect.x),
+      y: toIn(rect.y),
+      w: toIn(rect.w),
+      h: toIn(rect.h),
+      fontSize: baseFontSizePt,
+      fontFace: baseFontFace,
+      color: baseColorParsed ? baseColorParsed.hex : null,
+      transparency: baseColorParsed && baseColorParsed.hasAlpha ? Math.round((1 - baseColorParsed.alpha) * 100) : null,
+      align: baseAlign,
+      lineSpacing: baseLineSpacingPt,
+      marginArr,
+      items: allRuns,
+    });
+  }
+
+  // ---- 4.6 列表 ----
+  function processList(listEl) {
+    const rect = rectOf(listEl);
+    if (rect.w === 0 || rect.h === 0) return;
+
+    const cs = getComputedStyle(listEl);
+    const paddingLeftPt = toPt(parsePx(cs.paddingLeft));
+    const half = paddingLeftPt / 2;
+
+    const liEls = Array.from(listEl.querySelectorAll('li'));
+    liEls.forEach((li) => consumed.add(li));
+    consumed.add(listEl);
+    if (liEls.length === 0) return;
+
+    const baseCs = getComputedStyle(liEls[0]);
+    const baseFontSizePt = parseFloat(baseCs.fontSize) * PT_PER_PX;
+    const baseFontFace = firstFontFamily(baseCs.fontFamily);
+    const baseColorParsed = parseColorString(baseCs.color);
+    const baseAlign = normalizeAlign(baseCs.textAlign);
+    const baseLineSpacingPt = parseLineHeightPt(baseCs.lineHeight, baseFontSizePt);
+    const paraSpaceAfterPt = toPt(parsePx(baseCs.marginBottom));
+
+    const allRuns = [];
+    liEls.forEach((li, idx) => {
+      const marginErrs = [];
+      const runs = buildRuns(li, marginErrs);
+      errors.push(...marginErrs);
+      if (runs.length === 0) return;
+      stripLeadingManualBullet(runs[0]);
+      runs[0].options.bullet = { indent: half };
+      if (idx < liEls.length - 1) {
+        runs[runs.length - 1].options.breakLine = true;
+      }
+      allRuns.push(...runs);
+    });
+
+    if (allRuns.length === 0) return;
+
+    elements.push({
+      type: 'list',
+      x: toIn(rect.x),
+      y: toIn(rect.y),
+      w: toIn(rect.w),
+      h: toIn(rect.h),
+      fontSize: baseFontSizePt,
+      fontFace: baseFontFace,
+      color: baseColorParsed ? baseColorParsed.hex : null,
+      transparency: baseColorParsed && baseColorParsed.hasAlpha ? Math.round((1 - baseColorParsed.alpha) * 100) : null,
+      align: baseAlign,
+      lineSpacing: baseLineSpacingPt,
+      paraSpaceAfter: paraSpaceAfterPt,
+      marginArr: [half, 0, 0, 0],
+      items: allRuns,
+    });
+  }
+
+  // ---- 4.5 单个文本标签（含 4.5 preamble 提到的 li 兜底分支）----
+  function processTextElement(el) {
+    const tag = el.tagName;
+    const rect = rectOf(el);
+    const collapsedFull = collapseWs(el.textContent).trim();
+
+    if (rect.w === 0 || rect.h === 0 || collapsedFull === '') return;
+
+    if (tag !== 'LI') {
+      const m = /^([•\-*▪▸○●◆◇■□])\s/.exec(collapsedFull);
+      if (m) {
+        errors.push(
+          `<${tag.toLowerCase()}> 开头手打了项目符号「${truncate(collapsedFull, 20)}」——列表请用 <ul>/<ol>，不要自己打圆点`
+        );
+        return;
+      }
+    }
+
+    const cs = getComputedStyle(el);
+    const rotation = computeRotationDeg(cs);
+    const geomPx = computeGeometryPx(el, rotation);
+
+    const fontSizePt = parseFloat(cs.fontSize) * PT_PER_PX;
+    const fontFace = firstFontFamily(cs.fontFamily);
+    const colorParsed = parseColorString(cs.color);
+    const align = normalizeAlign(cs.textAlign);
+    const lineSpacingPt = parseLineHeightPt(cs.lineHeight, fontSizePt);
+    const marginTopPt = toPt(parsePx(cs.marginTop));
+    const marginBottomPt = toPt(parsePx(cs.marginBottom));
+    const paddingArr = [
+      toPt(parsePx(cs.paddingLeft)),
+      toPt(parsePx(cs.paddingRight)),
+      toPt(parsePx(cs.paddingBottom)),
+      toPt(parsePx(cs.paddingTop)),
+    ];
+    const hasPadding = paddingArr.some((v) => v !== 0);
+
+    let boldBase = cs.fontWeight === 'bold' || parseInt(cs.fontWeight, 10) >= 600;
+    if (isSingleWeightFont(fontFace)) boldBase = false;
+    const italicBase = cs.fontStyle === 'italic';
+    const decoBase = cs.textDecorationLine || cs.textDecoration || '';
+    const underlineBase = decoBase.indexOf('underline') !== -1;
+
+    let textOut;
+    let effectiveLineSpacing = lineSpacingPt;
+
+    if (hasInlineFormatting(el)) {
+      const marginErrs = [];
+      const runs = buildRuns(el, marginErrs);
+      errors.push(...marginErrs);
+      if (runs.length === 0) return;
+      textOut = runs;
+      const maxRunFontSize = Math.max.apply(
+        null,
+        runs.map((r) => r.options.fontSize)
+      );
+      if (maxRunFontSize > fontSizePt) {
+        effectiveLineSpacing = maxRunFontSize * (lineSpacingPt / fontSizePt);
+      }
+    } else {
+      textOut = applyTextTransform(collapsedFull, cs.textTransform);
+    }
+
+    // 几何补偿（6.6）：给单个 p/h1-h6 文本框的宽度加宽 2%，补偿 pptxgenjs/PowerPoint
+    // 对文字宽度的测量比浏览器偏窄这个已知误差。
+    const heightIn = geomPx.h / 96;
+    let xIn = geomPx.x / 96;
+    let yIn = geomPx.y / 96;
+    let wIn = geomPx.w / 96;
+    let hIn = heightIn;
+    {
+      const widen = wIn * 0.02;
+      if (align === 'right') {
+        xIn -= widen;
+        wIn += widen;
+      } else if (align === 'center') {
+        xIn -= widen / 2;
+        wIn += widen;
+      } else {
+        wIn += widen;
+      }
+    }
+
+    const outEl = {
+      type: tag.toLowerCase(),
+      x: xIn,
+      y: yIn,
+      w: wIn,
+      h: hIn,
+      fontSize: fontSizePt,
+      fontFace,
+      color: colorParsed ? colorParsed.hex : null,
+      transparency: colorParsed && colorParsed.hasAlpha ? Math.round((1 - colorParsed.alpha) * 100) : null,
+      align,
+      lineSpacing: effectiveLineSpacing,
+      paraSpaceBefore: marginTopPt,
+      paraSpaceAfter: marginBottomPt,
+      marginArr: hasPadding ? paddingArr : null,
+      rotate: rotation !== 0 ? rotation : null,
+      text: textOut,
+    };
+    if (typeof textOut === 'string') {
+      outEl.bold = boldBase;
+      outEl.italic = italicBase;
+      outEl.underline = underlineBase;
+    }
+    elements.push(outEl);
+  }
+
+  // ---- 背景 ----
+  function extractBackground() {
+    const cs = getComputedStyle(document.body);
+    if (cs.backgroundImage && cs.backgroundImage !== 'none') {
+      const m = /url\((['"]?)(.*?)\1\)/.exec(cs.backgroundImage);
+      if (m) return { type: 'image', value: m[2] };
+    }
+    const c = parseColorString(cs.backgroundColor);
+    if (isVisibleColor(c)) return { type: 'color', value: c.hex };
+    return null;
+  }
+
+  // ---- 主遍历 ----
+  const allNodes = Array.from(document.body.querySelectorAll('*'));
+
+  for (const el of allNodes) {
+    const tag = el.tagName;
+
+    if (TEXT_TAG_BG_CHECK.has(tag)) {
+      const v = violationOf(el);
+      if (v) {
+        errors.push(
+          `文字标签 <${tag.toLowerCase()}> 上设置了 ${v}：背景、边框、阴影只能加在 <div> 上，请在外面套一层 <div>`
+        );
+        continue;
+      }
+    }
+
+    if (consumed.has(el)) continue;
+
+    const classAttr = el.getAttribute('class') || '';
+
+    if (el.getAttribute('data-pptx-merge') === 'true') {
+      processMergeContainer(el);
+      continue;
+    }
+    if (classAttr.indexOf('placeholder') !== -1) {
+      processPlaceholder(el);
+      continue;
+    }
+    if (tag === 'IMG') {
+      processImage(el);
+      continue;
+    }
+    if (tag === 'DIV') {
+      processDiv(el);
+      continue;
+    }
+    if (tag === 'UL' || tag === 'OL') {
+      processList(el);
+      continue;
+    }
+    if (TEXT_ELEMENT_TAGS.has(tag)) {
+      processTextElement(el);
+      continue;
+    }
+    // 其它任何元素：忽略，不产出、不报错
+  }
+
+  const bodyCs = getComputedStyle(document.body);
+  return {
+    background: extractBackground(),
+    elements,
+    placeholders,
+    errors,
+    body: {
+      width: parseFloat(bodyCs.width),
+      height: parseFloat(bodyCs.height),
+      scrollWidth: document.body.scrollWidth,
+      scrollHeight: document.body.scrollHeight,
+    },
+  };
 }
 
-async function html2pptx(htmlFile, pres, options = {}) {
-  const {
-    tmpDir = process.env.TMPDIR || '/tmp',
-    slide = null
-  } = options;
+// ============================================================================
+// Node 侧：写入 pptxgenjs
+// ============================================================================
 
-  try {
-    // Use Chrome on macOS, default Chromium on Unix
-    const launchOptions = { env: { TMPDIR: tmpDir } };
-    if (process.platform === 'darwin') {
-      launchOptions.channel = 'chrome';
+function stripFileProtocol(p) {
+  return p.replace(/^file:\/\//, '');
+}
+
+function previewTextOf(el) {
+  if (typeof el.text === 'string') return el.text;
+  const arr = Array.isArray(el.text) ? el.text : Array.isArray(el.items) ? el.items : [];
+  for (const r of arr) {
+    if (r && typeof r.text === 'string' && r.text.trim() !== '') return r.text;
+  }
+  return '';
+}
+
+function writeElement(slide, pres, el) {
+  switch (el.type) {
+    case 'image': {
+      slide.addImage({ path: stripFileProtocol(el.src), x: el.x, y: el.y, w: el.w, h: el.h });
+      break;
     }
-
-    const browser = await chromium.launch(launchOptions);
-
-    let bodyDimensions;
-    let slideData;
-
-    const filePath = path.isAbsolute(htmlFile) ? htmlFile : path.join(process.cwd(), htmlFile);
-    const validationErrors = [];
-
-    try {
-      const page = await browser.newPage();
-      page.on('console', (msg) => {
-        // Log the message text to your test runner's console
-        console.log(`Browser console: ${msg.text()}`);
+    case 'line': {
+      slide.addShape(pres.ShapeType.line, {
+        x: el.x,
+        y: el.y,
+        w: el.w,
+        h: el.h,
+        line: { color: el.color, width: el.widthPt },
       });
-
-      await page.goto(`file://${filePath}`);
-
-      bodyDimensions = await getBodyDimensions(page);
-
-      await page.setViewportSize({
-        width: Math.round(bodyDimensions.width),
-        height: Math.round(bodyDimensions.height)
-      });
-
-      slideData = await extractSlideData(page);
-    } finally {
-      await browser.close();
+      break;
     }
-
-    // Collect all validation errors
-    if (bodyDimensions.errors && bodyDimensions.errors.length > 0) {
-      validationErrors.push(...bodyDimensions.errors);
+    case 'shape': {
+      const shapeName = el.rectRadius > 0 ? pres.ShapeType.roundRect : pres.ShapeType.rect;
+      const opts = { x: el.x, y: el.y, w: el.w, h: el.h, shape: shapeName };
+      if (el.fill) opts.fill = el.fill;
+      if (el.line) opts.line = el.line;
+      if (el.rectRadius > 0) opts.rectRadius = el.rectRadius;
+      if (el.shadow) opts.shadow = el.shadow;
+      slide.addText('', opts);
+      break;
     }
-
-    const dimensionErrors = validateDimensions(bodyDimensions, pres);
-    if (dimensionErrors.length > 0) {
-      validationErrors.push(...dimensionErrors);
+    case 'list': {
+      const opts = {
+        x: el.x,
+        y: el.y,
+        w: el.w,
+        h: el.h,
+        fontSize: el.fontSize,
+        fontFace: el.fontFace,
+        color: el.color,
+        align: el.align,
+        valign: 'top',
+        lineSpacing: el.lineSpacing,
+        paraSpaceBefore: 0,
+        paraSpaceAfter: el.paraSpaceAfter,
+        margin: el.marginArr,
+      };
+      if (el.transparency != null) opts.transparency = el.transparency;
+      slide.addText(el.items, opts);
+      break;
     }
-
-    const textBoxPositionErrors = validateTextBoxPosition(slideData, bodyDimensions);
-    if (textBoxPositionErrors.length > 0) {
-      validationErrors.push(...textBoxPositionErrors);
+    case 'merged-text': {
+      const opts = {
+        x: el.x,
+        y: el.y,
+        w: el.w,
+        h: el.h,
+        fontSize: el.fontSize,
+        fontFace: el.fontFace,
+        color: el.color,
+        align: el.align,
+        valign: 'top',
+        lineSpacing: el.lineSpacing,
+        paraSpaceBefore: 0,
+        paraSpaceAfter: 0,
+        margin: el.marginArr,
+      };
+      if (el.transparency != null) opts.transparency = el.transparency;
+      slide.addText(el.items, opts);
+      break;
     }
-
-    if (slideData.errors && slideData.errors.length > 0) {
-      validationErrors.push(...slideData.errors);
+    default: {
+      // p / h1-h6 / (兜底的 li)：单个文本框
+      const opts = {
+        x: el.x,
+        y: el.y,
+        w: el.w,
+        h: el.h,
+        fontSize: el.fontSize,
+        fontFace: el.fontFace,
+        color: el.color,
+        align: el.align,
+        valign: 'top',
+        lineSpacing: el.lineSpacing,
+        paraSpaceBefore: el.paraSpaceBefore,
+        paraSpaceAfter: el.paraSpaceAfter,
+        inset: 0,
+      };
+      if (typeof el.text === 'string') {
+        opts.bold = el.bold;
+        opts.italic = el.italic;
+        opts.underline = el.underline;
+      }
+      if (el.marginArr) opts.margin = el.marginArr;
+      if (el.rotate) opts.rotate = el.rotate;
+      if (el.transparency != null) opts.transparency = el.transparency;
+      slide.addText(el.text, opts);
+      break;
     }
-
-    // Throw all errors at once if any exist
-    if (validationErrors.length > 0) {
-      const errorMessage = validationErrors.length === 1
-        ? validationErrors[0]
-        : `Multiple validation errors found:\n${validationErrors.map((e, i) => `  ${i + 1}. ${e}`).join('\n')}`;
-      throw new Error(errorMessage);
-    }
-
-    const targetSlide = slide || pres.addSlide();
-
-    await addBackground(slideData, targetSlide, tmpDir);
-    addElements(slideData, targetSlide, pres);
-
-    return { slide: targetSlide, placeholders: slideData.placeholders };
-  } catch (error) {
-    if (!error.message.startsWith(htmlFile)) {
-      throw new Error(`${htmlFile}: ${error.message}`);
-    }
-    throw error;
   }
 }
 
-module.exports = html2pptx;
+module.exports = async function html2pptx(htmlFile, pres, options) {
+  options = options || {};
+  const absHtmlPath = path.isAbsolute(htmlFile) ? htmlFile : path.resolve(process.cwd(), htmlFile);
+  const tmpDir = options.tmpDir || process.env.TMPDIR || '/tmp';
+
+  function finalizeError(rawMessage) {
+    let message = rawMessage;
+    if (!message.startsWith(htmlFile)) {
+      message = `${htmlFile}: ${message}`;
+    }
+    return new Error(message);
+  }
+
+  let browser;
+  let extraction;
+  try {
+    const launchOptions = { env: Object.assign({}, process.env, { TMPDIR: tmpDir }) };
+    if (process.platform === 'darwin') launchOptions.channel = 'chrome';
+    browser = await chromium.launch(launchOptions);
+    const page = await browser.newPage();
+    await page.goto('file://' + absHtmlPath);
+
+    const initialBodySize = await page.evaluate(() => {
+      const cs = getComputedStyle(document.body);
+      return { width: parseFloat(cs.width), height: parseFloat(cs.height) };
+    });
+    await page.setViewportSize({
+      width: Math.max(1, Math.round(initialBodySize.width)),
+      height: Math.max(1, Math.round(initialBodySize.height)),
+    });
+
+    extraction = await page.evaluate(extractPageDataInBrowser);
+  } finally {
+    if (browser) await browser.close();
+  }
+
+  // ---- 整页级校验（第 5 节），和提取阶段收集到的错误合并 ----
+  const errors = extraction.errors.slice();
+
+  const widthOverflowPx = Math.max(0, extraction.body.scrollWidth - extraction.body.width - 1);
+  const heightOverflowPx = Math.max(0, extraction.body.scrollHeight - extraction.body.height - 1);
+  if (widthOverflowPx > 0) {
+    errors.push(`内容横向超出页面 ${(widthOverflowPx * PT_PER_PX).toFixed(1)}pt`);
+  }
+  if (heightOverflowPx > 0) {
+    errors.push(
+      `内容纵向超出页面 ${(heightOverflowPx * PT_PER_PX).toFixed(1)}pt（页面底部要留出 0.5 英寸空白）`
+    );
+  }
+
+  let slideHeightIn = null;
+  if (pres.presLayout) {
+    const layoutWIn = pres.presLayout.width / EMU_PER_INCH;
+    const layoutHIn = pres.presLayout.height / EMU_PER_INCH;
+    const bodyWIn = extraction.body.width * IN_PER_PX;
+    const bodyHIn = extraction.body.height * IN_PER_PX;
+    if (Math.abs(bodyWIn - layoutWIn) > 0.1 || Math.abs(bodyHIn - layoutHIn) > 0.1) {
+      errors.push(
+        `页面尺寸不一致：HTML 的 body 是 ${bodyWIn.toFixed(1)}×${bodyHIn.toFixed(1)} 英寸，PPT 版式是 ${layoutWIn.toFixed(1)}×${layoutHIn.toFixed(1)} 英寸`
+      );
+    }
+    slideHeightIn = layoutHIn;
+  }
+
+  if (slideHeightIn != null) {
+    const CHECK_TYPES = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'list', 'merged-text']);
+    for (const el of extraction.elements) {
+      if (!CHECK_TYPES.has(el.type)) continue;
+      if (!(el.fontSize > 12)) continue;
+      const distance = slideHeightIn - (el.y + el.h);
+      if (distance < 0.5) {
+        const preview = previewTextOf(el).slice(0, 50);
+        errors.push(`文本框「${preview}」离页面底边只有 ${distance.toFixed(2)} 英寸，至少要留 0.5 英寸`);
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    let message;
+    if (errors.length === 1) {
+      message = errors[0];
+    } else {
+      message = `发现 ${errors.length} 处问题：\n` + errors.map((e, i) => `  ${i + 1}. ${e}`).join('\n');
+    }
+    throw finalizeError(message);
+  }
+
+  // ---- 写入 slide ----
+  const slide = options.slide || pres.addSlide();
+
+  if (extraction.background) {
+    if (extraction.background.type === 'image') {
+      slide.background = { path: stripFileProtocol(extraction.background.value) };
+    } else {
+      slide.background = { color: extraction.background.value };
+    }
+  }
+
+  for (const el of extraction.elements) {
+    writeElement(slide, pres, el);
+  }
+
+  return { slide, placeholders: extraction.placeholders };
+};
