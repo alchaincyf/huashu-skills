@@ -89,7 +89,7 @@ description: |
 | **文字准确度** | 100%（代码控制） | 中文可能出错（需验证） |
 | **布局控制** | 像素级精确 | AI 自由发挥 |
 | **视觉创意** | 中（靠设计能力） | 高（AI 有创造力） |
-| **API 成本** | 零（纯本地） | 每张消耗 Gemini API |
+| **API 成本** | 零（纯本地） | 每张消耗所选图片 provider 的 API 额度 |
 | **速度** | 快（几秒） | 慢（10-30秒/张） |
 | **适合** | 文字多、数据多、清单、信息图 | 封面、氛围图、创意插画 |
 | **可编辑性** | 改 HTML 重新截图即可 | 需要重新生成 |
@@ -238,7 +238,7 @@ npx playwright screenshot "file:///path/to/card.html" output.png \
 
 ---
 
-### Path B: AI 生成（Gemini 3 Pro Image）
+### Path B: AI 生成（Gemini 或 Atlas Cloud）
 
 #### 3-B-1. 构建 Prompt
 
@@ -285,14 +285,34 @@ TEXT TO RENDER:
 
 #### 3-B-3. 生成
 
+Gemini 是默认 provider；设置 `ATLASCLOUD_API_KEY` 并显式传入
+`--provider atlas` 才会使用 Atlas Cloud。先定位本 skill 的实际安装目录，
+将其记为 `SKILL_DIR`，不要复制个人机器上的绝对路径。
+
+**Gemini（默认）：**
+
 ```bash
-export $(grep GEMINI_API_KEY ~/.claude/.env) && \
-uv run /Users/alchain/Documents/写作/.claude/skills/wechat-image/scripts/generate_image.py \
+uv run "$SKILL_DIR/scripts/generate_image.py" \
   --prompt "[完整prompt]" \
   --filename "[timestamp]-wechat-[类型]-[描述].png" \
   --aspect [cover|wide|standard|square]
 ```
 
+**Atlas Cloud（可选）：**
+
+```bash
+uv run "$SKILL_DIR/scripts/generate_image.py" \
+  --provider atlas \
+  --prompt "[完整prompt]" \
+  --filename "[timestamp]-wechat-[类型]-[描述].png" \
+  --aspect [cover|wide|standard|square]
+```
+
+- Gemini 读取 `GEMINI_API_KEY`；Atlas Cloud 读取 `ATLASCLOUD_API_KEY`。
+- 两个 provider 都支持 `--resolution 1K|2K|4K`。
+- 使用 Atlas Cloud 编辑本地图片时，`--input-image` 会将该图片临时上传，
+  仅用于本次生成任务；最终图片仍保存在 `--filename` 指定的本地路径。
+- Atlas Cloud 的生成提交不会自动重试，避免重复创建计费任务。
 - `--aspect cover` → 2.35:1 头条封面
 - `--aspect wide` → 16:9 正文宽图（默认）
 - `--aspect standard` → 4:3 正文方图
