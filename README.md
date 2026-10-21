@@ -6,7 +6,7 @@
   <sub>动画由 <a href="https://github.com/alchaincyf/huashu-design">huashu-design</a> skill制作</sub>
 </p>
 
-这里是花叔在GitHub上全部开源Skill的总目录，共57个，分三层收录。全部是标准Agent Skills格式（`SKILL.md`），Claude Code / Codex / Kimi Code等支持该格式的agent通用。
+这里是花叔在GitHub上全部开源Skill的总目录，共59条技能记录（含1条待整理记录），分三层收录。全部是标准Agent Skills格式（`SKILL.md`），Claude Code / Codex / Kimi Code等支持该格式的agent通用。
 
 > 花叔 | AI Native Coder · 独立开发者 · 全网50万+读者
 > 代表作：小猫补光灯（App Store付费榜Top1）·《一本书玩转DeepSeek》· 女娲Skill生态
@@ -17,9 +17,9 @@
 - [30秒上手](#30秒上手)
 - [全景一览](#全景一览)
 - [按需求找Skill](#按需求找skill)
-- [旗舰Skills](#旗舰skills)（21个独立仓库）
+- [旗舰Skills](#旗舰skills)（22个独立仓库，含1个待整理）
 - [人物视角Skills](#人物视角skills)（14个独立仓库）
-- [内置Skills](#内置skills)（22个，本仓库）
+- [内置Skills](#内置skills)（23个，本仓库）
 - [安装指南](#安装指南)
 - [保持更新](#保持更新)
 - [给AI Agent的协议](#给ai-agent的协议)
@@ -43,13 +43,20 @@ git clone https://github.com/alchaincyf/huashu-design.git ~/.claude/skills/huash
 
 | 层 | 数量 | 是什么 | 怎么装 |
 |---|---|---|---|
-| [旗舰Skills](#旗舰skills) | 21 | 各自深耕一个领域的完整系统，独立仓库 | git clone一条命令 |
+| [旗舰Skills](#旗舰skills) | 22（含1个待整理） | 各自深耕一个领域的完整系统，独立仓库 | git clone一条命令 |
 | [人物视角Skills](#人物视角skills) | 14 | 女娲蒸馏的人物思维操作系统，独立仓库 | git clone一条命令 |
-| [内置Skills](#内置skills) | 22 | 轻量内容创作技能+更新检查工具，就在本仓库 | 复制子目录 |
+| [内置Skills](#内置skills) | 23 | 工作流入口、轻量内容技能与维护工具，就在本仓库 | 复制子目录 |
 
 机器可读版目录在[`skills.json`](skills.json)，AI agent优先读它。
 
 ## 按需求找Skill
+
+不知道先用哪个，或作品能运行却不够好看？可以先用 [ask-huashu](ask-huashu/SKILL.md)：从内容、观众体验和创作卡点出发，再进入合适的工作流。它借鉴 Ask Matt 的导航结构，把花叔公开的创作判断与技能路线放在一个用户指派入口里；只在你点名时使用。
+
+安装方式与其它内置技能相同，复制 `ask-huashu/` 子目录。安装后可以说：
+
+> 用 ask-huashu 看看这份内容适合怎样表达，选一个工作流继续完成。
+
 
 | 你想做的事 | 用这个 |
 |---|---|
@@ -75,7 +82,7 @@ git clone https://github.com/alchaincyf/huashu-design.git ~/.claude/skills/huash
 
 ## 旗舰Skills
 
-21个独立仓库，每个都是完整系统。安装：`git clone https://github.com/alchaincyf/<仓库名>.git ~/.claude/skills/<仓库名>`（dukou、mcstomach除外，见表格备注）。
+22个独立仓库，其中 `huashu-motion` 在目录中标记为待整理（`curated: false`）。安装：`git clone https://github.com/alchaincyf/<仓库名>.git ~/.claude/skills/<仓库名>`（dukou、mcstomach、huashu-motion 的目录结构不同，见各仓库安装说明）。
 
 ### 设计与视觉
 
@@ -107,6 +114,7 @@ git clone https://github.com/alchaincyf/huashu-design.git ~/.claude/skills/huash
 |---|---|---|
 | [seedance-skill](https://github.com/alchaincyf/seedance-skill) | ![](https://img.shields.io/github/stars/alchaincyf/seedance-skill?style=flat&label=%E2%98%85) | 白模驱动的AI视频工作台：白模参考视频与提示词出自同一份scene.json，渲染前做几何体检 |
 | [huashu-art-motion](https://github.com/alchaincyf/huashu-art-motion) | ![](https://img.shields.io/github/stars/alchaincyf/huashu-art-motion?style=flat&label=%E2%98%85) | 艺术与解说动画：35种艺术风格、9种解说动画语法，拆解复刻、口播驱动整片，用代码让画动起来 |
+| [huashu-motion](https://github.com/alchaincyf/huashu-motion) | ![](https://img.shields.io/github/stars/alchaincyf/huashu-motion?style=flat&label=%E2%98%85) | 产品宣传片与逐帧批注工作台（目录待整理）；入口在 `skills/huashu-motion/`，运行依赖外层 CLI，按仓库说明安装 |
 
 ### 开发提速
 
@@ -166,7 +174,13 @@ git clone https://github.com/alchaincyf/huashu-design.git ~/.claude/skills/huash
 
 ## 内置Skills
 
-22个轻量技能，就在本仓库，覆盖公众号 / 视频 / 小红书从选题到发布的工作流。安装：按[复制子目录方式](#安装指南)。
+23个内置技能，就在本仓库，包含工作流入口、轻量内容技能与维护工具，覆盖公众号 / 视频 / 小红书从选题到发布。安装：按[复制子目录方式](#安装指南)。
+
+### 工作流入口
+
+| Skill | 干什么的 |
+|---|---|
+| [ask-huashu](ask-huashu/SKILL.md) | 用户指派的创作顾问与路由：判断当前卡点，选择并衔接合适的工作流 |
 
 ### 端到端工作流
 
@@ -285,4 +299,4 @@ cp -r /tmp/huashu-skills/huashu-slides ~/.claude/skills/
 
 ---
 
-**English**: This repo is the master index of all of Huashu's open-source Agent Skills — 57 skills in three tiers: 21 flagship skills (standalone repos, e.g. [huashu-design](https://github.com/alchaincyf/huashu-design), [nuwa-skill](https://github.com/alchaincyf/nuwa-skill), [darwin-skill](https://github.com/alchaincyf/darwin-skill)), 14 persona skills distilled by nuwa-skill, and 22 lightweight skills bundled in this repo, including an update checker ([huashu-skill-updater](huashu-skill-updater/)) that compares installed skills against the version tags of their upstream repos. All skills use the standard `SKILL.md` format and work with Claude Code, Codex, Kimi Code and other agents. Standalone skills install with one command: `git clone https://github.com/alchaincyf/<repo>.git ~/.claude/skills/<repo>`. A machine-readable catalog for AI agents lives in [`skills.json`](skills.json).
+**English**: This repo is the master index of all of Huashu's open-source Agent Skills — 59 skill records in three tiers: 22 flagship records (including one auto-discovered, uncurated entry) (standalone repos, e.g. [huashu-design](https://github.com/alchaincyf/huashu-design), [nuwa-skill](https://github.com/alchaincyf/nuwa-skill), [darwin-skill](https://github.com/alchaincyf/darwin-skill)), 14 persona skills distilled by nuwa-skill, and 23 skills bundled in this repo, including an update checker ([huashu-skill-updater](huashu-skill-updater/)) that compares installed skills against the version tags of their upstream repos. All skills use the standard `SKILL.md` format and work with Claude Code, Codex, Kimi Code and other agents. Standalone skills install with one command: `git clone https://github.com/alchaincyf/<repo>.git ~/.claude/skills/<repo>`. A machine-readable catalog for AI agents lives in [`skills.json`](skills.json).
