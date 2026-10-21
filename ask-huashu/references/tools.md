@@ -4,7 +4,7 @@
 
 | 安装标识 | 何时用 / 必要边界 |
 |---|---|
-| `nuwa-skill` | 从可核实材料提炼人物的思考框架、决策方式与表达，产出人物 skill |
+| `nuwa-skill` | 从可核实材料提炼人物的思考框架、决策方式与表达，产出人物 skill；实际 name 是 `huashu-nuwa` |
 | `darwin-skill` | 现有 skill 效果不好，需要基于真实案例评估、修改和对照测试 |
 | `freud-skill` | 提示词或 skill 的角色、目标与指令彼此冲突，需要诊断 |
 | `skills-guide` | 理解 skills、查找或安装合适的技能 |
