@@ -1,6 +1,6 @@
 interface:
   display_name: "Ask Huashu"
-  short_description: "从创作意图和审美判断出发，选择花叔技能家族中合适的工作流"
-  default_prompt: "用 $ask-huashu 判断我现在的创作卡点，选择合适的方向与工作流。"
+  short_description: "从内容、受众和审美判断出发，推荐具体技能、风格及视觉提案"
+  default_prompt: "用 $ask-huashu 根据我的场景推荐具体技能和风格，说明理由、画面做法与取舍。"
 policy:
   allow_implicit_invocation: false
