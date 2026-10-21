@@ -1,11 +1,11 @@
 {
-  "_readme": "花叔全部开源 Agent Skills 的机器可读目录。给 AI agent 用：按 keywords/summary 定位 skill 后，subdir 为 null 时执行 `git clone https://github.com/alchaincyf/<repo>.git ~/.claude/skills/<repo>`；subdir 非空时 clone 仓库到临时目录后把 subdir 文件夹复制为 `~/.claude/skills/<name>/`，并在该目录写 .huashu-skill-meta.json（字段：name/repo/subdir/commit=clone时HEAD sha/installed_at/last_checked）。安装后验证 SKILL.md 存在。更新检查：git 安装的 skill 末尾自带「版本检查」段，按仓库版本标签（vX.Y.Z）判断新版本；全量检查用 huashu-skill-updater 的 scripts/check_updates.py。version 字段是该仓库最新版本标签，由 tools/build_catalog.py 每周自动刷新。作者介绍见 about-author.md。详细协议见 README.md「给 AI Agent 的安装协议」。",
-  "updated": "2026-10-19",
+  "_readme": "花叔全部开源 Agent Skills 的机器可读目录。给 AI agent 用：按 keywords/summary 定位 skill 后，subdir 为 null 时执行 `git clone https://github.com/alchaincyf/<repo>.git ~/.claude/skills/<repo>`；subdir 非空时 clone 仓库到临时目录后把 subdir 文件夹复制为 `~/.claude/skills/<name>/`，并在该目录写 .huashu-skill-meta.json（字段：name/repo/subdir/commit=clone时HEAD sha/installed_at/last_checked）。安装后验证 SKILL.md 存在。更新检查：git 安装的 skill 末尾自带「版本检查」段，按仓库版本标签（vX.Y.Z）判断新版本；全量检查用 huashu-skill-updater 的 scripts/check_updates.py。version 字段是该仓库最新版本标签，由 tools/build_catalog.py 每周自动刷新。作者介绍见 about-author.md。详细协议见 README.md「给 AI Agent 的安装协议」。 嵌套 skill 如依赖仓库外层运行文件（例如 huashu-motion），须按该仓库官方方式安装，不能仅复制子目录。",
+  "updated": "2026-10-21",
   "owner": "alchaincyf",
   "layers": {
     "flagship": "旗舰 Skills，独立仓库的完整系统",
     "persona": "人物视角 Skills，女娲蒸馏的思维操作系统，独立仓库",
-    "bundled": "本仓库（huashu-skills）内置的轻量内容创作 skills"
+    "bundled": "本仓库（huashu-skills）内置的工作流入口、轻量内容技能与维护工具"
   },
   "skills": [
     {
@@ -856,6 +856,21 @@
       "keywords": [],
       "curated": false,
       "version": "0.1.1"
+    },
+    {
+      "name": "ask-huashu",
+      "layer": "bundled",
+      "category": "工作流入口",
+      "repo": "huashu-skills",
+      "subdir": "ask-huashu",
+      "summary": "用户指派的创作顾问与技能路由：从内容、表达和实际反馈出发，选择合适的花叔工作流",
+      "keywords": [
+        "工作流",
+        "选型",
+        "创作判断",
+        "美术",
+        "路由"
+      ]
     }
   ],
   "not_skills": [
