@@ -283,12 +283,9 @@
 
 ## 完整Prompt模板存档
 
-第二轮10种扩展风格的完整可复制prompt，详见：
-`/Users/alchain/Documents/写作/_temp/xiaohongshu-ppt-compare/风格对比-Prompt记录.md`
-
 Snoopy风格的详细per-slide模板，详见：
 `proven-styles-snoopy.md`
 
-Neo-Brutalism的完整HTML模板（131页验证版本），详见：
-`/Users/alchain/Documents/写作/自媒体经验梳理/蕴煜AI培训-202602/Day1-AI认知与工作流/`
-`/Users/alchain/Documents/写作/自媒体经验梳理/蕴煜AI培训-202602/Day2-AI编程与Claude生态/`
+另有两份底稿未随 skill 开源，仅在作者本地存档：第二轮10种扩展风格的完整可复制
+prompt 记录，以及 Neo-Brutalism 的完整 HTML 模板（一次企业内训课件里跑满 131 页
+的验证版本）。本文件上面各风格条目已把可复用的部分摘出来了。

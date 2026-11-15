@@ -51,7 +51,7 @@ description: 搜索个人素材库1800+条真实经历和观点，为内容增�
 1. **使用Grep工具搜索**
 ```
 pattern: "关键词1|关键词2|关键词3"
-path: /Users/alchain/Documents/写作/写作参考/个人素材库/全部即刻动态.csv
+path: 写作参考/个人素材库/全部即刻动态.csv
 output_mode: content
 -n: true
 -i: true  # 忽略大小写
@@ -317,20 +317,20 @@ AI可以替我写代码，但不能替我想清楚为什么要写这段代码。
 ### Grep搜索示例
 ```bash
 # 搜索关键词（支持正则表达式）
-grep -i "Cursor\|Claude Code" /Users/alchain/Documents/写作/写作参考/个人素材库/全部即刻动态.csv
+grep -i "Cursor\|Claude Code" 写作参考/个人素材库/全部即刻动态.csv
 
 # 搜索并显示行号
-grep -in "增长\|转化" /Users/alchain/Documents/写作/写作参考/个人素材库/全部即刻动态.csv
+grep -in "增长\|转化" 写作参考/个人素材库/全部即刻动态.csv
 
 # 搜索并显示上下文（前后3行）
-grep -i -C 3 "鸿蒙\|HarmonyOS" /Users/alchain/Documents/写作/写作参考/个人素材库/全部即刻动态.csv
+grep -i -C 3 "鸿蒙\|HarmonyOS" 写作参考/个人素材库/全部即刻动态.csv
 ```
 
 ### Claude Code中使用Grep工具
 ```
 Grep工具参数：
 pattern: "关键词1|关键词2"
-path: /Users/alchain/Documents/写作/写作参考/个人素材库/全部即刻动态.csv
+path: 写作参考/个人素材库/全部即刻动态.csv
 output_mode: content
 -n: true
 -i: true
