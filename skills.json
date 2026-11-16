@@ -1,6 +1,6 @@
 {
   "_readme": "花叔全部开源 Agent Skills 的机器可读目录。给 AI agent 用：按 keywords/summary 定位 skill 后，subdir 为 null 时执行 `git clone https://github.com/alchaincyf/<repo>.git ~/.claude/skills/<repo>`；subdir 非空时 clone 仓库到临时目录后把 subdir 文件夹复制为 `~/.claude/skills/<name>/`，并在该目录写 .huashu-skill-meta.json（字段：name/repo/subdir/commit=clone时HEAD sha/installed_at/last_checked）。安装后验证 SKILL.md 存在。更新检查：git 安装的 skill 末尾自带「版本检查」段，按仓库版本标签（vX.Y.Z）判断新版本；全量检查用 huashu-skill-updater 的 scripts/check_updates.py。version 字段是该仓库最新版本标签，由 tools/build_catalog.py 每周自动刷新。作者介绍见 about-author.md。详细协议见 README.md「给 AI Agent 的安装协议」。",
-  "updated": "2026-11-09",
+  "updated": "2026-11-16",
   "owner": "alchaincyf",
   "layers": {
     "flagship": "旗舰 Skills，独立仓库的完整系统",
@@ -25,7 +25,7 @@
         "HTML",
         "design"
       ],
-      "version": "3.2.0"
+      "version": "3.3.0"
     },
     {
       "name": "huashu-mac-use",
@@ -45,7 +45,7 @@
         "自动化",
         "mac"
       ],
-      "version": "1.1.1"
+      "version": "1.1.3"
     },
     {
       "name": "huashu-gpt-image",
@@ -125,7 +125,7 @@
         "报表",
         "CSV"
       ],
-      "version": "1.1.0"
+      "version": "1.1.1"
     },
     {
       "name": "huashu-md-html",
@@ -141,7 +141,7 @@
         "转换",
         "排版"
       ],
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
     {
       "name": "seedance-skill",
@@ -237,7 +237,7 @@
         "思维方式",
         "造人"
       ],
-      "version": "1.1.0"
+      "version": "2.0.1"
     },
     {
       "name": "darwin-skill",
@@ -251,7 +251,8 @@
         "进化",
         "评分",
         "darwin"
-      ]
+      ],
+      "version": "3.0.1"
     },
     {
       "name": "freud-skill",
@@ -299,7 +300,7 @@
         "arXiv",
         "report"
       ],
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     {
       "name": "zhangxuefeng-skill",
@@ -329,7 +330,7 @@
         "产品",
         "品味"
       ],
-      "version": "1.0.0"
+      "version": "2.0.0"
     },
     {
       "name": "elon-musk-skill",
@@ -358,7 +359,7 @@
         "逆向思考",
         "投资"
       ],
-      "version": "1.0.0"
+      "version": "2.0.0"
     },
     {
       "name": "karpathy-skill",
@@ -812,7 +813,7 @@
         "口播",
         "视频"
       ],
-      "version": "1.2.0"
+      "version": "1.3.1"
     },
     {
       "name": "huashu-flash",
@@ -855,7 +856,7 @@
       "summary": "让你的agent一键直出商业级产品宣传片：会作曲，能指着画面改。Commercial-grade launch films by your coding agent — point at the frame to change it.",
       "keywords": [],
       "curated": false,
-      "version": "0.3.1"
+      "version": "0.5.1"
     },
     {
       "name": "huashu-cad",
@@ -867,6 +868,17 @@
       "keywords": [],
       "curated": false,
       "version": "1.0.0"
+    },
+    {
+      "name": "huashu-selfie-sticker",
+      "layer": "flagship",
+      "category": "未分类",
+      "repo": "huashu-selfie-sticker",
+      "subdir": null,
+      "summary": "一张自拍做一整套透明底动态表情包的 agent skill",
+      "keywords": [],
+      "curated": false,
+      "version": "1.1.0"
     }
   ],
   "not_skills": [
